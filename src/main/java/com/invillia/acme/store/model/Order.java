@@ -1,13 +1,17 @@
 package com.invillia.acme.store.model;
 
-import java.io.Serializable;
+import java.math.BigInteger;
 import java.util.Date;
 import java.util.List;
 
-public class Order implements Serializable {
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-	private static final long serialVersionUID = 1L;
+@Document(collection = "order")
+public class Order {
 
+	@Id
+	public BigInteger id;
 	private String address;
 	private Date portabilityExpectedDate;
 	private String status;

@@ -1,8 +1,8 @@
 swagger: '2.0'
 info:
-  description: Spring Boot REST API for Maestro Create Order Entry
+  description: Spring Boot REST API for Invillia Create Store Entry
   version: '1.0'
-  title: Maestro Create Order REST API
+  title: Invillia Create Store REST API
   termsOfService: Terms of service
   contact: {}
   license:
@@ -11,189 +11,141 @@ info:
 host: 'localhost:8090'
 basePath: /
 tags:
-  - name: order-controller-v-1
-    description: Operações do Maestro
+  - name: store-controller-v-1
+    description: Criação de Loja
 paths:
-  /api/v1/stores:
+  /api/v1/createStore:
     post:
       tags:
-        - order-controller-v-1
-      summary: Cria um Pedido no sistema Maestro
-      operationId: createOrderUsingPOST
+        - store-controller-v-1
+      summary: Cria uma Loja
+      operationId: createStoreUsingPOST
       consumes:
         - application/json
       produces:
         - application/json
       parameters:
         - in: body
-          name: order
-          description: order
+          name: store
+          description: store
           required: true
           schema:
-            $ref: '#/definitions/Order'
+            $ref: '#/definitions/Store'
       responses:
         '200':
-          description: Criação de Pedido realizada com sucesso
+          description: Criação de Loja realizada com sucesso
           schema:
             type: string
             example: 1234567890
         '500':
-          description: Erro na criação do pedido
+          description: Erro na criação da Loja
+  /api/v1/updateStore/{id}:
+    put:
+      tags:
+        - store-controller-v-1
+      summary: Atualiza uma Loja
+      operationId: updateStoreUsingPOST
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: store
+          description: store
+          required: true
+          schema:
+            $ref: '#/definitions/Store'
+        - in: path
+          name: id
+          description: Store ID
+          required: true
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Atualização de Loja realizada com sucesso
+          schema:
+            type: string
+            example: 1234567890
+        '500':
+          description: Erro na atualização da Loja
+  /api/v1/findStore/{name}:
+    get:
+      tags:
+        - store-controller-v-1
+      summary: Procura uma Loja pelo Nome
+      operationId: findStoreUsingPOST
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: name
+          description: Store Name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Atualização de Loja realizada com sucesso
+          schema:
+            type: string
+            example: 'Invillia Store 0'
+        '500':
+          description: Erro na atualização da Loja
 definitions:
+  Store:
+    type: object
+    properties:
+      name:
+        type: string
+        example: 'Invillia Store'
+      address:
+        type: string
+        example: 'Rua Padre Duarte, 1253'
   Order:
     type: object
     properties:
-      cdAttendanceGroup:
-        type: integer
-        format: int32
-        example: 1
-      cdMarket:
-        type: integer
-        format: int32
-        example: 7
-      cdRepresentative:
-        type: integer
-        format: int64
-        example: 2
-      cdRetailFederalTax:
+      address:
         type: string
-        example: '41582679436'
-      externalOrderNumer:
+        example: 'Avenida XV de Novembro, 167'
+      portabilityExpectedDate:
         type: string
-        example: '0000000M4U0000'
-      idAttendanceLocallity:
-        type: integer
-        format: int32
-        example: 2
-      idCustomer:
-        type: integer
-        format: int64
-        example: 1111
-      cdCustomer:
+        format: date-time
+      status:
         type: string
-        example: '00.000000.00'
-      idFTE:
-        type: integer
-        format: int64
-        example: 1
-      integrationUser:
-        type: string
-        example: 'M4U'
+        example: 'Pedido Realizado'
       items:
         type: array
         items:
           $ref: '#/definitions/OrderItem'
-      optOut:
-        type: string
-        example: 'N'
-      fgArchive:
-        type: string
-        example: 'Y'
-      orderType:
-        type: integer
-        format: int32
-        example: 102
-      idAttendance:
-        type: integer
-        format: int64
-        example: 123456789
-      sqAttendanceRegister:
-        type: integer
-        format: int64
-        example: 123456789
-      idPaymentCondition:
-        type: integer
-        format: int64
-        example: 123456789
-      deliveryByTransportCompany:
-        type: boolean
-        example: 'true'
-      idSalesChannel:
-        type: integer
-        format: int64
-        example: 123456789
-      idModalDelivery:
-        type: integer
-        format: int64
-        example: 123456789
   OrderItem:
     type: object
     properties:
-      cdProduct:
+      description:
         type: string
-        example: 'SIMCARD-3G-P01'
-      ddd:
+        example: 'Mouse Óptico Wireless'
+      unitPrice:
+        type: number
+        example: '70.00'
+      quantity:
         type: integer
         format: int32
-        example: 11
-      idPromotionTable:
-        type: integer
-        format: int32
-      imei:
+        example: '2'
+  Payment:
+    type: object
+    properties:
+      store:
+        $ref: '#/definitions/Store'
+      order:
+        $ref: '#/definitions/Order'
+      status:
         type: string
-        example: '222222222'
-      loyalty:
-        type: boolean
-        example: 'true'
-      phoneNumber:
+        example: 'Aguardando Pagamento'
+      creditCardNumber:
         type: string
-        example: '999991234'
-      phoneNumberPortability:
-        type: string
-        example: '999994321'
-      portability:
-        type: string
-        example: 'S'
-      portabilityExpectedDate:
+        example: '5421 8373 2913 8080'
+      paymentDate:
         type: string
         format: date-time
-      simcard:
-        type: string
-        example: '111111111111'
-      tmcode:
-        type: string
-        example: '2278'
-      cdContractReplacement:
-        type: string
-        example: '123456'
-      cdSimcardReplacement:
-        type: string
-        example: '000000000000000000'
-      idReasonReplacement:
-        type: string
-        example: '123456'
-      commercialOffDetail:
-        $ref: '#/definitions/CommercialOffDetail'
-      services:
-        type: array
-        items:
-          $ref: '#/definitions/Services'
-      vaProduct:
-        type: number
-        example: '10.00'
-  CommercialOffDetail:
-    type: object
-    properties:
-      id:
-        type: string
-        example: '000000000000000000'
-      content:
-        type: string
-        example: '{id: 123, deCommercialDetail ... }'
-  Services:
-    type: object
-    properties:
-      sncode:
-        type: integer
-        format: int32
-        example: 1234
-      vaServiceChangefee:
-        type: number
-        example: '10.00'
-      qaServiceChangefeeMonth:
-        type: integer
-        format: int32
-        example: 11
-      monthlyPayment:
-        type: boolean
-        example: 'true'
