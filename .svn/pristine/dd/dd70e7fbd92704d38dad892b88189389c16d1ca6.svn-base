@@ -1,0 +1,22 @@
+package br.com.nextel.order.dao.mapper;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import com.nextel.xml.ServicoPedidoType;
+
+public class ServicePackageRowMapper implements org.springframework.jdbc.core.RowMapper<ServicoPedidoType> {
+
+	@Override
+	public ServicoPedidoType mapRow(ResultSet rs, int arg1) throws SQLException {
+		ServicoPedidoType service = new ServicoPedidoType();
+		service.setServicoID(rs.getInt("cd_service"));
+		service.setServicoName(rs.getString("de_service"));
+		service.setDuracaoDescontoID(rs.getInt("qa_change_access_fee_billcycle"));
+		service.setDuracaoDescontoMeses(rs.getInt("qa_change_access_fee_month"));
+		service.setServicoValorNovo(rs.getFloat("va_change_access_fee"));
+		service.setExcluir(rs.getString("tp_pack_template_serv_action").trim().toUpperCase().equals("D"));
+		return service;
+	}
+
+}

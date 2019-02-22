@@ -1,0 +1,45 @@
+package br.com.nextel.order.model;
+
+import java.io.Serializable;
+
+public class PlanService implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+	private Long idRatePlan;
+	private Integer cdService;
+	private String deService;
+	private Float vaService;
+
+	public Long getIdRatePlan() {
+		return idRatePlan;
+	}
+
+	public void setIdRatePlan(Long idRatePlan) {
+		this.idRatePlan = idRatePlan;
+	}
+
+	public Integer getCdService() {
+		return cdService;
+	}
+
+	public void setCdService(Integer cdService) {
+		this.cdService = cdService;
+	}
+
+	public String getDeService() {
+		return deService;
+	}
+
+	public void setDeService(String deService) {
+		this.deService = deService;
+	}
+
+	public Float getVaService() {
+		return vaService;
+	}
+
+	public void setVaService(Float vaService) {
+		this.vaService = vaService;
+	}
+
+}

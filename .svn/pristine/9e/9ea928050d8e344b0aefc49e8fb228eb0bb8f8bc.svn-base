@@ -1,0 +1,256 @@
+package br.com.nextel.order.dao;
+
+import java.sql.Types;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.SqlOutParameter;
+import org.springframework.jdbc.core.SqlParameter;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.simple.SimpleJdbcCall;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.nextel.xml.OcorrenciaPedidoType;
+import com.nextel.xml.PedidoType;
+
+import br.com.nextel.order.dao.mapper.OcorrenciaPedidoTypeRowMapper;
+import br.com.nextel.order.exception.CreateOrderException;
+import br.com.nextel.order.model.Order;
+
+@Transactional
+@Repository
+public class OrderDAO {
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	private String QRY_ORDER_STATUS_EVENT = " select CD_ORDER_STATUS, CD_ORDER_EVENT, ? NM_USER from tsng_order_status_event\r\n"
+			+ " where id_order_type = ?\r\n" + " and FG_DEFAULT = 'Y' " + " ORDER BY NR_ORDER";
+	
+	private String QRY_ORDER_STATUS_EVENT_ARCHIVE = " select CD_ORDER_STATUS, CD_ORDER_EVENT, ? NM_USER from tsng_order_status_event\r\n"
+			+ " where id_order_type = ?\r\n" + " and FG_DEFAULT_ARCHIVE = 'Y' " + " ORDER BY NR_ORDER_ARCHIVE";
+
+	private String QRY_INSERT_ORDER_ITEM_PORTABILITY_ITEM = 
+			"INSERT INTO sng.tsng_order_item_portability\n" +
+					"  (cd_order,\n" + 
+					"   cd_order_item,\n" + 
+					"   cd_mobile_portability,\n" + 
+					"   dt_portability_expected,\n" + 
+					"   dt_created,\n" + 
+					"   nm_last_user_modification)\n" + 
+					"VALUES  (?,?,?,NVL(?,SYSDATE+3) ,SYSDATE,USER)";
+
+	private String QRY_PROCESSO_NEGOCIO = "SELECT ID_BUSINESS_PROCESS FROM SNG.TSNG_ORDER_TYPE WHERE ID_ORDER_TYPE = ?";
+	
+
+	public List<OcorrenciaPedidoType> getOcorrencias(Order order) {
+		List<OcorrenciaPedidoType> ocorrencias = null;
+		if(order.getFgArchive() != null && order.getFgArchive().equalsIgnoreCase("Y")) {
+			ocorrencias = jdbcTemplate.query(QRY_ORDER_STATUS_EVENT_ARCHIVE,
+					new OcorrenciaPedidoTypeRowMapper(), order.getIntegrationUser(), order.getOrderType());
+		}else {
+			ocorrencias = jdbcTemplate.query(QRY_ORDER_STATUS_EVENT,
+					new OcorrenciaPedidoTypeRowMapper(), order.getIntegrationUser(), order.getOrderType());
+		}
+		return ocorrencias;
+	}
+
+	@Transactional	
+	public void updateOrderItem(String cdOrderItem, String numeroPedido, String phoneNumberPortability, Date dtExpectedPortability) {
+		numeroPedido = String.format("%1$-20s", numeroPedido);  
+		jdbcTemplate.update(QRY_INSERT_ORDER_ITEM_PORTABILITY_ITEM,  numeroPedido, cdOrderItem, phoneNumberPortability, dtExpectedPortability);
+	}
+
+	public int getProcessoNegocio(Order order) throws CreateOrderException {
+		try {
+			return jdbcTemplate.queryForObject(QRY_PROCESSO_NEGOCIO, Integer.class, order.getOrderType());
+		} catch (EmptyResultDataAccessException e) {
+			throw new CreateOrderException("Não foi possível encontrar o processo de negocio ");
+		}
+	}
+	
+	/**
+	 * Gerar novo numero do pedido 
+	 * @param sufix
+	 * @return
+	 */
+	public String generatorNewOrderNumber(String sufix) throws CreateOrderException{
+		
+		SimpleJdbcCall call = new SimpleJdbcCall(jdbcTemplate);
+		
+		call.withSchemaName("SNG")
+			.withCatalogName("KSNG_ORDER_NUMBER")
+			.withProcedureName("PSNG_NEW_ORDER_NUMBER")
+			.declareParameters(
+				new SqlParameter("p_sufix", 			Types.VARCHAR),
+				new SqlOutParameter("p_cd_order_new", 	Types.VARCHAR),
+				new SqlOutParameter("p_type_verifier", 	Types.VARCHAR),
+				new SqlOutParameter("p_retorno", 		Types.VARCHAR),
+				new SqlOutParameter("p_message",		Types.VARCHAR)
+			);
+		
+		MapSqlParameterSource  map = new MapSqlParameterSource();
+		map.addValue("p_sufix", sufix);
+        Map<String, Object> result = call.execute(map);
+        
+        String retorno = (String) result.get("p_retorno");
+        
+        if(!retorno.contains("E000")) 
+        	throw new CreateOrderException(String.format("Não foi possível gerar número do pedido - %s", retorno.contains("p_message")));
+		
+		return (String) result.get("p_cd_order_new");
+	}
+	
+	
+	private String SQL_SALE_CHANNEL = "select count(*) from sng.tsng_order_type_sale_channel where id_order_type = ? and trim(cd_sale_channel) = ?";
+	public boolean validateSalesChannel(PedidoType pedido) {
+		try {
+			long result = jdbcTemplate.queryForObject(SQL_SALE_CHANNEL, Long.class , pedido.getTipoPedidoID()  , pedido.getCanalVendasID());
+			return result>0;
+		}catch(EmptyResultDataAccessException e) {
+			return false;
+		}
+	}	
+	
+
+	private String SQL_PAYMENT_COND = "select count(*) from sng.tsng_order_type_payment_cond where id_order_type = ? and trim(cd_payment_condition) = ? and fg_excluded_register='N' ";
+	public boolean validatePaymentCondition(PedidoType pedido) {
+		try {
+			long result = jdbcTemplate.queryForObject(SQL_PAYMENT_COND, Long.class , pedido.getTipoPedidoID()  , pedido.getCondicaoPagamentoID());
+			return result>0;
+		}catch(EmptyResultDataAccessException e) {
+			return false;
+		}
+	}		
+	
+
+	private String SQL_TRANSPORT_COMPANY = "select count(*) from sng.tsng_order_type_transp_company where id_order_type = ? and trim(cd_transport_company) = ?";
+	public boolean validateTransportCompany(PedidoType pedido) {
+		try {
+			long result = jdbcTemplate.queryForObject(SQL_TRANSPORT_COMPANY, Long.class , pedido.getTipoPedidoID()  , pedido.getTransportadoraID());
+			return result>0;
+		}catch(EmptyResultDataAccessException e) {
+			return false;
+		}
+	}	
+	
+	private String SQL_VALIDATE_ORDER = "select o.dt_created , ot.de_order_type from sng.tsng_order o , sng.tsng_order_Type ot\r\n" + 
+			"where cd_order = rpad(?, 20) and o.id_order_type = ot.id_order_type";
+	public Map<String, Object> validateOrderNumber(PedidoType pedido) {
+		try {
+			Map<String, Object> teste = jdbcTemplate.queryForMap(SQL_VALIDATE_ORDER, pedido.getNumeroPedido() );
+			return teste;
+
+		}catch(EmptyResultDataAccessException e) {
+			return null;
+		}
+	}	
+	
+	private String SQL_VALIDATE_ATTENDANCE_REGISTER = "select count(*) from sng.tsng_attendance_register where id_attendance = ? and sq_attendance_register = ?";
+	public boolean validateAttendanceRegister(Order order) {
+		try {
+			long result = jdbcTemplate.queryForObject(SQL_VALIDATE_ATTENDANCE_REGISTER, Long.class , order.getIdAttendance()  , order.getSqAttendanceRegister());
+			return result>0;
+		}catch(EmptyResultDataAccessException e) {
+			return false;
+		}
+	}
+	
+	private String SQL_VALIDATE_CHANNEL_TYPE = 
+			"select CASE\n" +
+					"         WHEN EXISTS (\n" + 
+					"\n" + 
+					"               SELECT G.COD_REPRESENTANTE COD_REPRESENTANTE,\n" + 
+					"                       A.NOM_FUNCIONARIO   NOM_COLABORADOR\n" + 
+					"                 FROM CORP.BCT_FUNCIONARIO        A,\n" + 
+					"                       CORP.BCT_FUNCIONARIO_ESTAB  B,\n" + 
+					"                       CORP.BCT_FUNCAO_FUNCIONARIO C,\n" + 
+					"                       CORP.BCT_FUNCAO             D,\n" + 
+					"                       CORP.BCT_ASS_DEPT_FUNC      E,\n" + 
+					"                       CORP.BCT_DEPARTAMENTO       F,\n" + 
+					"                       CORP.BCT_REPRESENTANTE      G\n" + 
+					"                WHERE D.COD_FUNCAO = C.COD_FUNCAO\n" + 
+					"                  AND C.COD_EMPRESA = B.COD_EMPRESA\n" + 
+					"                  AND C.COD_ESTABELECIMENTO = B.COD_ESTABELECIMENTO\n" + 
+					"                  AND C.COD_MATRICULA = B.COD_MATRICULA\n" + 
+					"                  AND B.COD_FUNCIONARIO = A.COD_FUNCIONARIO\n" + 
+					"                  AND A.COD_FUNCIONARIO = E.COD_FUNCIONARIO\n" + 
+					"                  AND G.COD_FUNCIONARIO = E.COD_FUNCIONARIO\n" + 
+					"                  AND F.COD_DEPARTAMENTO = E.COD_DEPARTAMENTO\n" + 
+					"                  AND E.DAT_FIM IS NULL\n" + 
+					"                  AND G.COD_REPRESENTANTE = ? ---C_REPRESENTANTE\n" + 
+					"               ) THEN\n" + 
+					"          'Vendedor Direto'\n" + 
+					"\n" + 
+					"       -- Check for Dealer\n" + 
+					"         WHEN EXISTS (SELECT A.COD_REPRESENTANTE COD_REPRESENTANTE,\n" + 
+					"                      A.NOM_REPRESENTANTE NOM_COLABORADOR\n" + 
+					"                 FROM CORP.BCT_REPRESENTANTE A,\n" + 
+					"                      CORP.BCT_ASS_DEPT_REPR E,\n" + 
+					"                      CORP.BCT_DEPARTAMENTO  F\n" + 
+					"                WHERE A.COD_REPRESENTANTE = E.COD_REPRESENTANTE\n" + 
+					"                  AND F.COD_DEPARTAMENTO = E.COD_DEPARTAMENTO\n" + 
+					"                  AND E.DAT_FIM IS NULL\n" + 
+					"                  AND A.COD_REPRESENTANTE = ? ---C_REPRESENTANTE\n" + 
+					"               ) THEN\n" + 
+					"          'Dealer Indireto'\n" + 
+					"       END AS STATUS\n" + 
+					"  FROM DUAL";
+	
+	public boolean validateChannelFTE(Order order) {
+		try {
+			
+			if (order.getIdFTE() == null && order.getCdRepresentative() == null) {
+				return true;
+			}
+			
+			String result = jdbcTemplate.queryForObject(SQL_VALIDATE_CHANNEL_TYPE, String.class,
+					order.getCdRepresentative(), order.getCdRepresentative());
+			
+			if (result != null) {
+				
+				if ("Vendedor Direto".equals(result) && order.getIdFTE() != null) {
+					return false;
+				}
+				
+				if ("Dealer Indireto".equals(result) && order.getIdFTE() == null ) {
+					return false;
+				}
+			}
+			return true;
+
+		} catch (EmptyResultDataAccessException e) {
+			return false;
+		}
+	}
+	
+	public void registerAcceptControl(String numeroPedido) throws CreateOrderException{
+		
+		SimpleJdbcCall call = new SimpleJdbcCall(jdbcTemplate);
+		
+		call.withSchemaName("SNG")
+			.withCatalogName("KSNG_ORDER_ACCEPT_CONTROL")
+			.withProcedureName("PSNG_REQUEST_ACCEPT")
+			.declareParameters(
+				new SqlParameter("p_cd_order", 			Types.CHAR),
+				new SqlOutParameter("p_return", 		Types.VARCHAR),
+				new SqlOutParameter("p_message",		Types.VARCHAR)
+			);
+		
+		MapSqlParameterSource  map = new MapSqlParameterSource();
+		map.addValue("p_cd_order", numeroPedido);
+        Map<String, Object> result = call.execute(map);
+        
+        String retorno = (String) result.get("p_return");
+        
+        if(!retorno.contains("AC00")) 
+        	throw new CreateOrderException(String.format("Não foi possível inserir o registro de controle para o pedido " + numeroPedido, retorno.contains("p_message")));
+
+	}
+	
+}

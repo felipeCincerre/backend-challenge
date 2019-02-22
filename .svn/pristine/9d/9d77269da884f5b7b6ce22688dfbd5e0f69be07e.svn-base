@@ -1,0 +1,25 @@
+package br.com.nextel.order.service;
+
+import com.nextel.xml.ClienteType;
+import com.nextel.xml.PedidoType;
+import com.nextel.xml.PedidoType.ItensPedido;
+import com.nextel.xml.PedidoType.OcorrenciasPedido;
+import com.nextel.xml.ResultadoProcessamentoPedido;
+import com.nextel.xml.UsuarioType;
+
+import br.com.nextel.order.exception.CreateOrderException;
+import br.com.nextel.order.model.Order;
+import br.com.nextel.order.model.TransportCompany;
+
+public interface OrderService {
+	
+	public ItensPedido buildProduct(Order orderInfo, ClienteType customer) throws CreateOrderException;
+	public OcorrenciasPedido buildOcorrence(Order orderInfo) throws CreateOrderException;
+	public PedidoType buildCapaOrder(Order order) throws CreateOrderException;
+	public ResultadoProcessamentoPedido insertOrder(UsuarioType user, PedidoType pedido) throws CreateOrderException;
+	public void updateItems(Order order, ResultadoProcessamentoPedido response);
+	public PedidoType orderAttendanceAssoc(Order order, PedidoType pedido) throws CreateOrderException;;
+	public TransportCompany getTransportCompanyDefaultForMarket(PedidoType pedido);
+	public void createRegisterCommercialDetail(Order order, PedidoType pedidoType);
+	public void createRegisterAcceptControl(String numeroPedido) throws CreateOrderException;
+}

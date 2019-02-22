@@ -1,0 +1,16 @@
+package br.com.nextel.order.util;
+
+import br.com.nextel.order.model.Order;
+
+public class OrderHelper {
+	
+	private static int ENTREGA_EXPRESSA = 	178;
+	private static int SUBSTITUICAO_EXPRESSA = 180;
+
+	
+	public static boolean isFastDelivery (Order order) {
+		
+		return order.getOrderType() == ENTREGA_EXPRESSA || order.getOrderType() == SUBSTITUICAO_EXPRESSA; 
+	}
+
+}

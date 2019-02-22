@@ -1,0 +1,20 @@
+package br.com.nextel.order.dao.mapper;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import br.com.nextel.order.model.TransportCompany;
+
+public class TransportCompanyRowMapper implements RowMapper<TransportCompany>{
+
+	@Override
+	public TransportCompany mapRow(ResultSet rs, int line) throws SQLException {
+		TransportCompany transportCompany = new TransportCompany();
+		transportCompany.setId(rs.getLong("cd_transport_company"));
+		transportCompany.setName(rs.getString("nm_transport_company"));
+		return transportCompany;
+	}
+	
+}

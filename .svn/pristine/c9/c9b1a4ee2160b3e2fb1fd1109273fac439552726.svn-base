@@ -1,0 +1,108 @@
+package br.com.nextel.order.model.contract;
+
+import java.io.Serializable;
+
+public class ContractService implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	private long servicoID;
+
+	private String servicoTipo;
+
+	private String servicoTipoSigla;
+
+	private boolean paraSempre;
+
+	private double servicoValorNovo;
+
+	private int duracaoDescontoID;
+
+	private int duracaoDescontoMeses;
+
+	private double servicoValorOriginal;
+
+	private boolean servicoHabilitado;
+
+	public long getServicoID() {
+		return servicoID;
+	}
+
+	public void setServicoID(long servicoID) {
+		this.servicoID = servicoID;
+	}
+
+	public String getServicoTipo() {
+		return servicoTipo;
+	}
+
+	public void setServicoTipo(String servicoTipo) {
+		this.servicoTipo = servicoTipo;
+	}
+
+	public String getServicoTipoSigla() {
+		return servicoTipoSigla;
+	}
+
+	public void setServicoTipoSigla(String servicoTipoSigla) {
+		this.servicoTipoSigla = servicoTipoSigla;
+	}
+
+	public boolean isParaSempre() {
+		return paraSempre;
+	}
+
+	public void setParaSempre(boolean paraSempre) {
+		this.paraSempre = paraSempre;
+	}
+
+	public double getServicoValorNovo() {
+		return servicoValorNovo;
+	}
+
+	public void setServicoValorNovo(double servicoValorNovo) {
+		this.servicoValorNovo = servicoValorNovo;
+	}
+
+	public int getDuracaoDescontoID() {
+		return duracaoDescontoID;
+	}
+
+	public void setDuracaoDescontoID(int duracaoDescontoID) {
+		this.duracaoDescontoID = duracaoDescontoID;
+	}
+
+	public int getDuracaoDescontoMeses() {
+		return duracaoDescontoMeses;
+	}
+
+	public void setDuracaoDescontoMeses(int duracaoDescontoMeses) {
+		this.duracaoDescontoMeses = duracaoDescontoMeses;
+	}
+
+	public double getServicoValorOriginal() {
+		return servicoValorOriginal;
+	}
+
+	public void setServicoValorOriginal(double servicoValorOriginal) {
+		this.servicoValorOriginal = servicoValorOriginal;
+	}
+
+	public boolean isServicoHabilitado() {
+		return servicoHabilitado;
+	}
+
+	public void setServicoHabilitado(boolean servicoHabilitado) {
+		this.servicoHabilitado = servicoHabilitado;
+	}
+
+	@Override
+	public String toString() {
+		return "ContractService [servicoID=" + servicoID + ", servicoTipo=" + servicoTipo + ", servicoTipoSigla="
+				+ servicoTipoSigla + ", paraSempre=" + paraSempre + ", servicoValorNovo=" + servicoValorNovo
+				+ ", duracaoDescontoID=" + duracaoDescontoID + ", duracaoDescontoMeses=" + duracaoDescontoMeses
+				+ ", servicoValorOriginal=" + servicoValorOriginal + ", servicoHabilitado=" + servicoHabilitado + "]";
+	}
+
+	
+}

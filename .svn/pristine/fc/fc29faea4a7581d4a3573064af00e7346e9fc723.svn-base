@@ -1,0 +1,197 @@
+package br.com.nextel.order.model;
+
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
+
+import br.com.nextel.order.model.contract.ContractService;
+
+public class OrderItem implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+	
+	String simcard;
+	String imei;
+	String cdProduct;
+	String tmcode;
+	int ddd;
+	String phoneNumber;
+	String phoneNumberPortability;
+	String portability;
+	Date portabilityExpectedDate;
+	Double vaProduct;
+	boolean loyalty = false;
+	String cdContractReplacement;
+	String cdSimcardReplacement;
+	String idReasonReplacement;
+	int idPromotionTable;
+	private CommercialOffDetail commercialOffDetail;
+	private List<ContractService> listaServico;
+
+	/** Serviços carregados através do Request Body **/
+	private List<OrderItemService> services;
+
+	public Date getPortabilityExpectedDate() {
+		return portabilityExpectedDate;
+	}
+
+	public void setPortabilityExpectedDate(Date portabilityExpectedDate) {
+		this.portabilityExpectedDate = portabilityExpectedDate;
+	}
+
+	public String getSimcard() {
+		return simcard;
+	}
+
+	public void setSimcard(String simcard) {
+		this.simcard = simcard;
+	}
+
+	public String getImei() {
+		return imei;
+	}
+
+	public void setImei(String imei) {
+		this.imei = imei;
+	}
+
+	public String getCdProduct() {
+		return cdProduct;
+	}
+
+	public void setCdProduct(String cdProduct) {
+		this.cdProduct = cdProduct;
+	}
+
+	public String getTmcode() {
+		return tmcode;
+	}
+
+	public void setTmcode(String tmcode) {
+		this.tmcode = tmcode;
+	}
+
+	public int getDdd() {
+		return ddd;
+	}
+
+	public void setDdd(int ddd) {
+		this.ddd = ddd;
+	}
+
+	public String getPhoneNumber() {
+		return phoneNumber;
+	}
+
+	public void setPhoneNumber(String phoneNumber) {
+		this.phoneNumber = phoneNumber;
+	}
+
+	public String getPhoneNumberPortability() {
+		return phoneNumberPortability;
+	}
+
+	public void setPhoneNumberPortability(String phoneNumberPortability) {
+		this.phoneNumberPortability = phoneNumberPortability;
+	}
+
+	public String getPortability() {
+		return portability;
+	}
+
+	public void setPortability(String portability) {
+		this.portability = portability;
+	}
+
+	public int getIdPromotionTable() {
+		return idPromotionTable;
+	}
+
+	public void setIdPromotionTable(int idPromotionTable) {
+		this.idPromotionTable = idPromotionTable;
+	}
+
+	public String getCdContractReplacement() {
+		return cdContractReplacement;
+	}
+
+	public void setCdContractReplacement(String cdContractReplacement) {
+		this.cdContractReplacement = cdContractReplacement;
+	}
+
+	public String getCdSimcardReplacement() {
+		return cdSimcardReplacement;
+	}
+
+	public void setCdSimcardReplacement(String cdSimcardReplacement) {
+		this.cdSimcardReplacement = cdSimcardReplacement;
+	}
+
+	public String getIdReasonReplacement() {
+		return idReasonReplacement;
+	}
+
+	public void setIdReasonReplacement(String idReasonReplacement) {
+		this.idReasonReplacement = idReasonReplacement;
+	}
+
+
+	public List<ContractService> getListaServico() {
+		return listaServico;
+	}
+
+	public void setListaServico(List<ContractService> listaServico) {
+		this.listaServico = listaServico;
+	}
+
+	public CommercialOffDetail getCommercialOffDetail() {
+		return commercialOffDetail;
+	}
+	
+	public void setCommercialOffDetail(CommercialOffDetail commercialOffDetail) {
+		this.commercialOffDetail = commercialOffDetail;
+	}
+
+	public List<OrderItemService> getServices() {
+		return services;
+	}
+
+	public void setServices(List<OrderItemService> services) {
+		this.services = services;
+	}
+
+	public void addService(OrderItemService service) {
+		this.services.add(service);
+	}
+
+	public Double getVaProduct() {
+		return vaProduct;
+	}
+
+	public void setVaProduct(Double vaProduct) {
+		this.vaProduct = vaProduct;
+	}
+
+	public boolean isLoyalty() {
+		return loyalty;
+	}
+
+	public void setLoyalty(boolean loyalty) {
+		this.loyalty = loyalty;
+	}
+
+	@Override
+	public String toString() {
+		return "OrderItem [simcard=" + simcard + ", imei=" + imei + ", cdProduct=" + cdProduct + ", tmcode=" + tmcode
+				+ ", ddd=" + ddd + ", phoneNumber=" + phoneNumber + ", phoneNumberPortability=" + phoneNumberPortability
+				+ ", portability=" + portability + ", portabilityExpectedDate=" + portabilityExpectedDate
+				+ ", vaProduct=" + vaProduct + ", loyalty=" + loyalty + ", cdContractReplacement="
+				+ cdContractReplacement + ", cdSimcardReplacement=" + cdSimcardReplacement + ", idReasonReplacement="
+				+ idReasonReplacement + ", idPromotionTable=" + idPromotionTable + ", commercialOffDetail="
+				+ commercialOffDetail + ", listaServico=" + listaServico + ", services=" + services + "]";
+	}
+
+
+
+
+}

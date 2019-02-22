@@ -1,0 +1,78 @@
+package br.com.nextel.order.model.contract;
+
+import java.io.Serializable;
+import java.util.List;
+
+
+public class Contract implements Serializable{
+
+	private static final long serialVersionUID = 1L;
+	
+	private String contrato;
+	private String simacard;
+	private String imei;
+	private String radio;
+	private String status;
+	private String natureza;
+	private String telefone;
+	private Plan plan;
+	private List<ContractService> listaServico;
+	
+	public String  getContrato() {
+		return contrato;
+	}
+	public void setContrato(String contrato) {
+		this.contrato = contrato;
+	}
+	public String getSimacard() {
+		return simacard;
+	}
+	public void setSimacard(String simacard) {
+		this.simacard = simacard;
+	}
+	public String getImei() {
+		return imei;
+	}
+	public void setImei(String imei) {
+		this.imei = imei;
+	}
+	public String getRadio() {
+		return radio;
+	}
+	public void setRadio(String radio) {
+		this.radio = radio;
+	}
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public String getNatureza() {
+		return natureza;
+	}
+	public void setNatureza(String natureza) {
+		this.natureza = natureza;
+	}
+	public String getTelefone() {
+		return telefone;
+	}
+	public void setTelefone(String telefone) {
+		this.telefone = telefone;
+	}
+	public Plan getPlan() {
+		return plan;
+	}
+	public void setPlan(Plan plan) {
+		this.plan = plan;
+	}
+	
+	public List<ContractService> getListaServico() {
+		return listaServico;
+	}
+	public void setListaServico(List<ContractService> listaServico) {
+		this.listaServico = listaServico;
+	}
+
+
+}

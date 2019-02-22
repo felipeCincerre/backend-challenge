@@ -1,0 +1,37 @@
+package br.com.nextel.order.model.contract;
+
+import java.io.Serializable;
+
+public class Plan implements Serializable{
+	private static final long serialVersionUID = 1L;
+	
+	private String id;
+	private String versao;
+	private String descricao;
+	private boolean vigente;
+	public String getId() {
+		return id;
+	}
+	public void setId(String id) {
+		this.id = id;
+	}
+	public String getVersao() {
+		return versao;
+	}
+	public void setVersao(String versao) {
+		this.versao = versao;
+	}
+	public String getDescricao() {
+		return descricao;
+	}
+	public void setDescricao(String descricao) {
+		this.descricao = descricao;
+	}
+	public boolean isVigente() {
+		return vigente;
+	}
+	public void setVigente(boolean vigente) {
+		this.vigente = vigente;
+	}
+	
+}

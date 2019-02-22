@@ -1,0 +1,22 @@
+package br.com.nextel.order.model;
+
+import java.io.Serializable;
+
+public class OrderResponse implements Serializable {
+
+	private static final long serialVersionUID = 6781967367696860423L;
+	
+	
+	private String cdOrder;
+
+
+	public String getCdOrder() {
+		return cdOrder;
+	}
+
+
+	public void setCdOrder(String cdOrder) {
+		this.cdOrder = cdOrder;
+	}
+
+}

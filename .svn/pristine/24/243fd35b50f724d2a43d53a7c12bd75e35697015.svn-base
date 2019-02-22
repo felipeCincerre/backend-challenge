@@ -1,0 +1,24 @@
+package br.com.nextel.order.dao;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+@Transactional
+@Repository
+public class ClientDAO {
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	private final String QRY_CLIENT_BT_CD_CUSTOMER = "SELECT id_customer  FROM BGN.TBGN_CUSTOMER "
+			+ "WHERE fg_excluded_register = 'N' " + "  AND cd_customer = ? ";
+
+	public Long getidCustomer(String cdCustomer) {
+		Long resultado = jdbcTemplate.queryForObject(QRY_CLIENT_BT_CD_CUSTOMER, Long.class, cdCustomer);
+
+		return resultado;
+
+	}
+}

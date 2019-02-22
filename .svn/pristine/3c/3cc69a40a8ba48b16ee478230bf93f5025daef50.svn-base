@@ -1,0 +1,23 @@
+package br.com.nextel.order.dao.mapper;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import br.com.nextel.order.model.Order;
+
+public class OrderRowMapper implements RowMapper<Order> {
+
+	@Override
+	public Order mapRow(ResultSet rs, int rowNum) throws SQLException {
+		Order order = new Order();
+		order.setCdMarket(rs.getInt("cd_market"));
+		order.setCdAttendanceGroup(rs.getInt("cd_attendance_group"));
+		
+		
+
+		return order;
+	}
+
+}

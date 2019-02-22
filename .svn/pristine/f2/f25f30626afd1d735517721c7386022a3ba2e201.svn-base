@@ -1,0 +1,21 @@
+package br.com.nextel.order.dao.mapper;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import br.com.nextel.order.model.Plano;
+
+public class PlanRowMapper implements RowMapper<Plano>{
+
+	@Override
+	public Plano mapRow(ResultSet rs, int arg1) throws SQLException {
+		Plano plano = new Plano();
+		plano.setIdRatePlan(rs.getLong("id_rate_plan"));
+		plano.setFgEffectivePlan(rs.getString("fg_effective_plan").equals("Y"));
+	
+		return plano;
+	}
+
+}

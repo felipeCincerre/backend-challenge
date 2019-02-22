@@ -1,0 +1,213 @@
+package br.com.nextel.order.model;
+
+import java.io.Serializable;
+import java.util.List;
+
+public class Order implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	private String externalOrderNumer;
+	private Integer orderType;
+	private Integer cdAttendanceGroup;
+	private Integer idAttendanceLocallity;
+	private Long idCustomer;
+	private String cdCustomer;
+	private Long id;
+	private Long cdRepresentative;
+	private Integer cdMarket;
+	private Long idFTE;
+	private String cdRetailFederalTax;
+	private String integrationUser;
+	private String optOut;
+	private String fgArchive;
+	private Long idAttendance;
+	private Long sqAttendanceRegister;
+	private Long idPaymentCondition;
+	private Long idSalesChannel;
+	private Long idModalDelivery;
+	private Boolean deliveryByTransportCompany = false;
+	List<OrderItem> items;
+
+	public String getExternalOrderNumer() {
+		return externalOrderNumer;
+	}
+
+	public void setExternalOrderNumer(String externalOrderNumer) {
+		this.externalOrderNumer = externalOrderNumer;
+	}
+
+	public Integer getOrderType() {
+		return orderType;
+	}
+
+	public void setOrderType(Integer orderType) {
+		this.orderType = orderType;
+	}
+
+	public Integer getCdAttendanceGroup() {
+		return cdAttendanceGroup;
+	}
+
+	public void setCdAttendanceGroup(Integer cdAttendanceGroup) {
+		this.cdAttendanceGroup = cdAttendanceGroup;
+	}
+
+	public Integer getIdAttendanceLocallity() {
+		return idAttendanceLocallity;
+	}
+
+	public void setIdAttendanceLocallity(Integer idAttendanceLocallity) {
+		this.idAttendanceLocallity = idAttendanceLocallity;
+	}
+
+	public Long getIdCustomer() {
+		return idCustomer;
+	}
+
+	public void setIdCustomer(Long idCustomer) {
+		this.idCustomer = idCustomer;
+	}
+
+	public String getCdCustomer() {
+		return cdCustomer;
+	}
+
+	public void setCdCustomer(String cdCustomer) {
+		this.cdCustomer = cdCustomer;
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public Long getCdRepresentative() {
+		return cdRepresentative;
+	}
+
+	public void setCdRepresentative(Long cdRepresentative) {
+		this.cdRepresentative = cdRepresentative;
+	}
+
+	public Integer getCdMarket() {
+		return cdMarket;
+	}
+
+	public void setCdMarket(Integer cdMarket) {
+		this.cdMarket = cdMarket;
+	}
+
+	public Long getIdFTE() {
+		return idFTE;
+	}
+
+	public void setIdFTE(Long idFTE) {
+		this.idFTE = idFTE;
+	}
+
+	public String getCdRetailFederalTax() {
+		return cdRetailFederalTax;
+	}
+
+	public void setCdRetailFederalTax(String cdRetailFederalTax) {
+		this.cdRetailFederalTax = cdRetailFederalTax;
+	}
+
+	public String getIntegrationUser() {
+		return integrationUser;
+	}
+
+	public void setIntegrationUser(String integrationUser) {
+		this.integrationUser = integrationUser;
+	}
+
+	public String getOptOut() {
+		return optOut;
+	}
+
+	public void setOptOut(String optOut) {
+		this.optOut = optOut;
+	}
+	
+	public String getFgArchive() {
+		return fgArchive;
+	}
+	
+	public void setFgArchive(String fgDefaultArchive) {
+		this.fgArchive = fgDefaultArchive;
+	}
+
+	public Long getIdPaymentCondition() {
+		return idPaymentCondition;
+	}
+
+	public void setIdPaymentCondition(Long idPaymentCondition) {
+		this.idPaymentCondition = idPaymentCondition;
+	}
+
+	public Long getIdSalesChannel() {
+		return idSalesChannel;
+	}
+
+	public void setIdSalesChannel(Long idSalesChannel) {
+		this.idSalesChannel = idSalesChannel;
+	}
+
+	public Long getIdModalDelivery() {
+		return idModalDelivery;
+	}
+
+	public void setIdModalDelivery(Long idModalDelivery) {
+		this.idModalDelivery = idModalDelivery;
+	}
+
+	public List<OrderItem> getItems() {
+		return items;
+	}
+
+	public void setItems(List<OrderItem> items) {
+		this.items = items;
+	}
+
+	public Long getIdAttendance() {
+		return idAttendance;
+	}
+
+	public void setIdAttendance(Long idAttendance) {
+		this.idAttendance = idAttendance;
+	}
+
+	public Long getSqAttendanceRegister() {
+		return sqAttendanceRegister;
+	}
+
+	public void setSqAttendanceRegister(Long sqAttendanceRegister) {
+		this.sqAttendanceRegister = sqAttendanceRegister;
+	}
+
+	public Boolean getDeliveryByTransportCompany() {
+		return deliveryByTransportCompany;
+	}
+
+	public Boolean isDeliveryByTransportCompany() {
+		return deliveryByTransportCompany;
+	}
+
+	public void setDeliveryByTransportCompany(Boolean deliveryByTransportCompany) {
+		this.deliveryByTransportCompany = deliveryByTransportCompany;
+	}
+
+	@Override
+	public String toString() {
+		return "Order [externalOrderNumer=" + externalOrderNumer + ", orderType=" + orderType + ", cdAttendanceGroup="
+				+ cdAttendanceGroup + ", idAttendanceLocallity=" + idAttendanceLocallity + ", idCustomer=" + idCustomer
+				+ ", cdRepresentative=" + cdRepresentative + ", cdMarket=" + cdMarket + ", idFTE=" + idFTE
+				+ ", cdRetailFederalTax=" + cdRetailFederalTax + ", integrationUser=" + integrationUser + ", optOut="
+				+ optOut + ", items=" + items + "]";
+	}
+
+}

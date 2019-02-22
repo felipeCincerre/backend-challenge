@@ -1,0 +1,10 @@
+package br.com.nextel.order.service;
+
+import com.nextel.xml.ClienteType;
+
+import br.com.nextel.order.exception.CreateOrderException;
+
+public interface CustomerService {
+      public ClienteType  getCustomer(Long idCustomer)  throws CreateOrderException;
+      public ClienteType  getCustomer(String cdCustomer)  throws CreateOrderException;
+}

@@ -1,0 +1,27 @@
+package br.com.nextel.order.model;
+
+import java.io.Serializable;
+
+public class PackageTemplate implements Serializable{
+
+	private static final long serialVersionUID = 1L;
+	
+	private Integer idPackageTemplate;
+	private String nomePacote;
+	
+	public Integer getIdPackageTemplate() {
+		return idPackageTemplate;
+	}
+	public void setIdPackageTemplate(Integer idPackageTemplate) {
+		this.idPackageTemplate = idPackageTemplate;
+	}
+	public String getNomePacote() {
+		return nomePacote;
+	}
+	public void setNomePacote(String nomePacote) {
+		this.nomePacote = nomePacote;
+	}
+
+	
+
+}

@@ -1,0 +1,11 @@
+package br.com.nextel.order.service;
+
+import com.nextel.xml.PedidoType;
+
+import br.com.nextel.order.exception.CreateOrderException;
+import br.com.nextel.order.model.Order;
+
+public interface ValidateService {
+
+	public void validate(PedidoType pedido, Order order) throws CreateOrderException;
+}

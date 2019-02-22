@@ -1,0 +1,45 @@
+package br.com.nextel.order.dao;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import com.nextel.xml.GrupoItensPedidoType;
+import com.nextel.xml.PedidoType;
+
+import br.com.nextel.order.dao.mapper.PlanRowMapper;
+import br.com.nextel.order.model.Plano;
+
+@Repository
+public class PlanoDAO {
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	private final String QRY_FIND_PLAN = "SELECT * FROM sng.tsng_rate_plan WHERE cd_rate_plan = ?";
+
+	public Plano getPlano(String cdRatePlan) {
+		
+		Plano plano = null;
+		try {
+		  plano = jdbcTemplate.queryForObject(QRY_FIND_PLAN, new PlanRowMapper(), cdRatePlan );
+		}catch(Exception e ) {
+			plano = null;
+		}
+		return plano;
+		
+	}
+	
+	private String SQL_RATE_PLAN = "select count(*) from tsng_order_type_rate_plan where id_order_type = ? and id_rate_plan = ?";
+	public boolean validateRatePlan(PedidoType pedido, GrupoItensPedidoType item ) {
+		try {
+			long result = jdbcTemplate.queryForObject(SQL_RATE_PLAN, Long.class , pedido.getTipoPedidoID()  , item.getPlanoID());
+			return result>0;
+		}catch(EmptyResultDataAccessException e) {
+			return false;
+		}
+	}	
+	
+	
+}

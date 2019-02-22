@@ -1,0 +1,100 @@
+package br.com.nextel.order.dao;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import br.com.nextel.order.dao.mapper.TransportCompanyRowMapper;
+import br.com.nextel.order.model.TransportCompany;
+
+@Transactional
+@Repository
+public class MarketDAO{
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+	
+	@Autowired
+	private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
+	private final String QRY_DDD_EXIST_IN_MARKET = "SELECT " + 
+			"  count(*)  " + 
+			"FROM " + 
+			"  SNG.TSNG_MARKET_CODE_AREA " + 
+			"WHERE " + 
+			"  fg_excluded_register = 'N' " + 
+			"  AND cd_market = ? " + 
+			"  AND cd_market_code_area = ? ";
+	
+	private final String QRY_FLEET_MARKET = 
+			"select cd_fleet from sng.tsng_market_fleet" + 
+			"   where cd_market =? " + 
+			"   and fg_excluded_register = 'N'" + 
+			"   and cd_urban_code = 35" + 
+			"   and rownum = 1 ";
+	
+	private final String QRY_DDD_MARKET =
+			"SELECT cd_market_code_area\n" +
+			"  FROM (SELECT cd_market_code_area\n" + 
+			"          FROM sng.tsng_market_code_area\n" + 
+			"         WHERE fg_excluded_register = 'N'\n" + 
+			"           AND cd_market = ? \n" + 
+			"         ORDER BY fg_main_market_code_area DESC)\n" + 
+			" WHERE rownum = 1";
+
+	
+	public Boolean marketHaveDDD(Integer cdMarket, Integer ddd) {
+		
+		 Integer resultado =  jdbcTemplate.queryForObject(QRY_DDD_EXIST_IN_MARKET, 
+				 Integer.class, cdMarket, ddd );
+		 
+		 return resultado.intValue() > 0; 
+		 
+	}
+	
+	public Integer getFleetMarket(Integer cdMarket) {
+		 Integer resultado =  jdbcTemplate.queryForObject(QRY_FLEET_MARKET, 
+				 Integer.class, cdMarket );
+		
+		 return resultado;
+		
+	}
+	
+	public Integer getDDDMarket(Integer cdMarket) {
+		 Integer resultado =  jdbcTemplate.queryForObject(QRY_DDD_MARKET, 
+				 Integer.class, cdMarket );
+		
+		 return resultado;
+		
+	}
+	
+	private final String QRY_FIND_TRANSPORT_COMPANY = "SELECT " + 
+			" TC.* " + 
+			"FROM " + 
+			"    TSNG_MARKET_ORDER_TYPE_TRANSP MOT " + 
+			"    JOIN TSNG_TRANSPORT_COMPANY TC " + 
+			"        ON (TC.CD_TRANSPORT_COMPANY = MOT.CD_TRANSPORT_COMPANY) " + 
+			"WHERE " + 
+			"    MOT.FG_MAIN_MKT_ORDER_TYPE_TRANSP = 'Y' " + 
+			"    AND MOT.FG_EXCLUDED_REGISTER = 'N' " + 
+			"    AND MOT.FG_CUSTOMER_WITHDRAW = 'N' " + 
+			"    AND MOT.ID_ORDER_TYPE = :idOrderType " + 
+			"    AND MOT.CD_MARKET = :cdMarket ";
+	
+	public TransportCompany findTransportCompanyMain(Long idOrderType, Long cdMarket) {
+		try {
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("idOrderType", idOrderType);
+			params.put("cdMarket", cdMarket);
+			return namedParameterJdbcTemplate.queryForObject(QRY_FIND_TRANSPORT_COMPANY, params, new TransportCompanyRowMapper());
+		}catch (EmptyResultDataAccessException e) {
+			return null;
+		}
+	}
+}

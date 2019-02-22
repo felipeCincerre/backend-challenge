@@ -1,0 +1,145 @@
+package br.com.nextel.order.controller;
+
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.nextel.xml.ClienteType;
+import com.nextel.xml.MensagemErroType;
+import com.nextel.xml.OcorrenciaPedidoType;
+import com.nextel.xml.PedidoType;
+import com.nextel.xml.PedidoType.ItensPedido;
+import com.nextel.xml.PedidoType.OcorrenciasPedido;
+import com.nextel.xml.ResultadoProcessamentoPedido;
+import com.nextel.xml.UsuarioType;
+
+import br.com.nextel.order.exception.CreateOrderException;
+import br.com.nextel.order.model.Order;
+import br.com.nextel.order.model.OrderResponse;
+import br.com.nextel.order.model.TransportCompany;
+import br.com.nextel.order.service.CustomerService;
+import br.com.nextel.order.service.LogService;
+import br.com.nextel.order.service.OrderService;
+import br.com.nextel.order.service.ValidateService;
+import br.com.nextel.order.util.OrderHelper;
+
+@RestController
+public class OrderControllerV1 {
+	
+	
+	@Autowired
+	private OrderService orderService;
+	
+	@Autowired
+	private CustomerService customerService;
+
+	@Autowired
+	private LogService logService;
+
+	@Autowired
+	DataSource dataSource;
+
+	@Autowired
+	ValidateService validateService;
+	
+	@RequestMapping(method = RequestMethod.POST ,  value =  "/api/v1/createOrder")
+	public String createOrder(@RequestBody Order order) throws CreateOrderException {
+
+		ClienteType customer =null;
+		if (order.getIdCustomer() != null && order.getIdCustomer() > 0) {
+			customer =customerService.getCustomer(order.getIdCustomer());
+		}else if (order.getCdCustomer() !=null) {
+			customer =customerService.getCustomer(order.getCdCustomer());
+			order.setIdCustomer(customer.getClienteID());
+			if(order.getCdMarket() == null || order.getCdMarket() == 0) {
+				order.setCdMarket( Integer.parseInt(customer.getMercado()));
+			}
+		}
+		
+		Long idLog = logService.saveLogOrderJson(order);
+		
+		if (customer == null)
+			throw new CreateOrderException("Cliente não localizado");
+		
+		PedidoType pedido = orderService.buildCapaOrder(order);		
+		
+		pedido.setCliente(customer);
+		
+		ItensPedido itensPedido = orderService.buildProduct(order, customer);
+		pedido.setItensPedido(itensPedido);
+
+		OcorrenciasPedido ocorrenciasPedido = orderService.buildOcorrence(order);
+		pedido.setOcorrenciasPedido(ocorrenciasPedido);
+		
+		// Associando o ultimo status pra o pedido
+		if(ocorrenciasPedido != null && ocorrenciasPedido.getOcorrencia() != null && !ocorrenciasPedido.getOcorrencia().isEmpty()) {
+			OcorrenciaPedidoType lastOcorrence = ocorrenciasPedido.getOcorrencia().get(ocorrenciasPedido.getOcorrencia().size() - 1);
+			pedido.setStatusPedidoID(lastOcorrence.getStatus().trim());
+			pedido.setOcorrenciaID(Integer.parseInt(lastOcorrence.getOcorrenciaID().trim()));
+		}
+		
+		UsuarioType user = new UsuarioType();
+		user.setUsuarioID(order.getIntegrationUser());
+
+		//Associa chamado com Pedido
+		if(order.getIdAttendance() != null && order.getSqAttendanceRegister() != null) {
+			pedido = orderService.orderAttendanceAssoc(order, pedido);
+		}
+
+		if(order.isDeliveryByTransportCompany()) {
+			TransportCompany transportCompany = orderService.getTransportCompanyDefaultForMarket(pedido);
+			
+			if(transportCompany == null && OrderHelper.isFastDelivery(order))
+				throw new CreateOrderException("Não foi possível localizar uma transportadora default");
+			
+			pedido.setTipoEntrega("C"); // entrega via CD
+			
+			if(transportCompany != null) {
+				pedido.setTransportadoraID(transportCompany.getId().toString());
+				pedido.setTransportadoraDescricao(transportCompany.getName());
+			}
+		}
+		
+		validateService.validate(pedido, order);
+		
+		// Envia pedido para o Maestro
+		ResultadoProcessamentoPedido response = orderService.insertOrder(user, pedido);		
+		logService.saveLogPedidoXML(order, pedido, response);
+		if (response.getResultadoProcessamento().isSucesso()) {
+			orderService.updateItems(order, response);
+			orderService.createRegisterCommercialDetail(order, response.getPedido());
+			if(!StringUtils.isEmpty(order.getCdRetailFederalTax()) && (order.getFgArchive() != null && order.getFgArchive().equalsIgnoreCase("Y"))) {
+				orderService.createRegisterAcceptControl(response.getPedido().getNumeroPedido());
+			}
+			logService.updateLogOrderJson(idLog, response.getPedido().getNumeroPedido(), null);
+
+		}else {
+			
+			String erro = "";
+			for(MensagemErroType mensagemErro  : response.getResultadoProcessamento().getListaErros().getMensagem()) {
+				erro += mensagemErro.getMensagem().getValue() + "\n";
+			}
+			throw new CreateOrderException(erro);
+		}
+		
+		
+		System.out.println("Order:" + order);
+		return response.getPedido().getNumeroPedido();
+	}
+
+	@RequestMapping(method = RequestMethod.POST ,  value =  "/api/V2/order")
+	public ResponseEntity<OrderResponse> createOrderJson(@RequestBody Order order) throws CreateOrderException {
+		String cdOrder = createOrder(order);
+		OrderResponse response = new OrderResponse();
+		response.setCdOrder(cdOrder);
+		
+		return new ResponseEntity<OrderResponse>(response, HttpStatus.OK);
+	}
+}

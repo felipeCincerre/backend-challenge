@@ -1,0 +1,29 @@
+package br.com.nextel.order.model;
+
+import java.io.Serializable;
+
+public class Plano implements Serializable {
+
+
+	private static final long serialVersionUID = 1L;
+	private Long idRatePlan;
+	private Boolean fgEffectivePlan;
+
+	public Long getIdRatePlan() {
+		return idRatePlan;
+	}
+
+	public void setIdRatePlan(Long idRatePlan) {
+		this.idRatePlan = idRatePlan;
+	}
+
+	public Boolean getFgEffectivePlan() {
+		return fgEffectivePlan;
+	}
+
+	public void setFgEffectivePlan(Boolean fgEffectivePlan) {
+		this.fgEffectivePlan = fgEffectivePlan;
+	}
+
+
+}

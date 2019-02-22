@@ -1,0 +1,50 @@
+package br.com.nextel.order.dao;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import br.com.nextel.order.model.Order;
+import br.com.nextel.order.service.util.JsonUtil;
+
+@Repository
+public class LogManagerDAO {
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	private final String QRY_INSERT_LOG_MANAGER = 
+			"insert into sng.tsng_log_manager (cd_log_manager, cd_service, de_service, dt_last_modification, nm_last_user_modification, in_xml, out_xml, exception_error)\r\n" + 
+			"   values (?, ?, ?, sysdate, ?, ?, ?, ?)";
+	
+	private final String QRY_GET_SEQUENCE_LOG = "select sng.ssng_cd_log_manager.nextval from dual";
+
+	private final String QRY_UPDATE_LOG_MANAGER = "update sng.tsng_log_manager set out_xml = ? , exception_error = ?  where cd_log_manager = ?";
+                 
+	public Long insertLog(Order order, String cdService) {
+		
+		Long id = jdbcTemplate.queryForObject(QRY_GET_SEQUENCE_LOG, Long.class);
+		
+		String jsonRequest = JsonUtil.generateJsonOfObject(order);
+		
+		jdbcTemplate.update(QRY_INSERT_LOG_MANAGER, id, cdService, order.getIdCustomer(), order.getIntegrationUser(), jsonRequest, null, null);
+		
+		return id;
+		
+	}
+	
+	public void updateLog(Long id, String outXml , String error ) {
+		
+		jdbcTemplate.update(QRY_UPDATE_LOG_MANAGER, outXml, error, id);
+	}
+	
+	
+	public Long insertLogXML(String xmlPedido, Long idCustomer,  String cdService, String user, String outXML) {
+		
+		Long id = jdbcTemplate.queryForObject(QRY_GET_SEQUENCE_LOG, Long.class);
+		
+		jdbcTemplate.update(QRY_INSERT_LOG_MANAGER, id, cdService, idCustomer, user, xmlPedido, outXML, null);
+		
+		return id;
+		
+	}
+}

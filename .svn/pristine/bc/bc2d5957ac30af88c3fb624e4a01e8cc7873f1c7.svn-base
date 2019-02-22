@@ -1,0 +1,62 @@
+package br.com.nextel.order.dao;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import br.com.nextel.order.dao.mapper.PlanServiceRowMapper;
+import br.com.nextel.order.model.PlanService;
+
+@Repository
+public class PlanServiceDAO {
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+	
+	@Autowired
+	private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+	
+	private final String QRY_FIND_ALL_SERVICE_CORE = "SELECT " + 
+			"  s.cd_service, s.de_service, ps.va_plan_service " + 
+			"FROM " + 
+			"  sng.tsng_plan_service ps " + 
+			"  JOIN sng.tsng_service s " + 
+			"    ON (s.cd_service = ps.cd_service) " + 
+			"WHERE " + 
+			"  fg_core_service = 'Y' " + 
+			"  AND id_rate_plan = ? ";
+	
+
+	public List<PlanService> getAllBaseServiceOfPlan(Long plan){
+		return jdbcTemplate.query(QRY_FIND_ALL_SERVICE_CORE, new PlanServiceRowMapper(), plan);
+	}
+
+	private final String QRY_FIND_SERVICE = "SELECT " + 
+			"  s.cd_service, s.de_service, ps.va_plan_service " + 
+			"FROM " + 
+			"  sng.tsng_plan_service ps " + 
+			"  JOIN sng.tsng_service s " + 
+			"    ON (s.cd_service = ps.cd_service) " + 
+			"WHERE " + 
+			"  id_rate_plan = :idRatePlan " +
+			"  AND s.cd_service = :sncode ";
+	
+	public PlanService findService(Long idRatePlan, Integer sncode) {
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("idRatePlan", idRatePlan);
+		params.put("sncode", sncode);
+		
+		try {
+			return namedParameterJdbcTemplate.queryForObject(QRY_FIND_SERVICE, params, new PlanServiceRowMapper());
+		}catch (EmptyResultDataAccessException e) {
+			return null;
+		}
+	}
+
+}

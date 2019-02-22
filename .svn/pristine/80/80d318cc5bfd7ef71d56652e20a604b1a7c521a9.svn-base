@@ -1,0 +1,63 @@
+package br.com.nextel.order.model;
+
+import java.io.Serializable;
+
+public class ServicePackage implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+	private Integer cdService;
+	private String deService;
+	private Boolean delelte;
+	private Float vaChangefee;
+	private Float vaOriginalPlan;
+	private Integer qaChangefee;
+
+	public Integer getCdService() {
+		return cdService;
+	}
+
+	public void setCdService(Integer cdService) {
+		this.cdService = cdService;
+	}
+
+	public String getDeService() {
+		return deService;
+	}
+
+	public void setDeService(String deService) {
+		this.deService = deService;
+	}
+
+	public Boolean isDelelte() {
+		return delelte;
+	}
+
+	public void setDelelte(Boolean delelte) {
+		this.delelte = delelte;
+	}
+
+	public Float getVaChangefee() {
+		return vaChangefee;
+	}
+
+	public void setVaChangefee(Float vaChangefee) {
+		this.vaChangefee = vaChangefee;
+	}
+
+	public Float getVaOriginalPlan() {
+		return vaOriginalPlan;
+	}
+
+	public void setVaOriginalPlan(Float vaOriginalPlan) {
+		this.vaOriginalPlan = vaOriginalPlan;
+	}
+
+	public Integer getQaChangefee() {
+		return qaChangefee;
+	}
+
+	public void setQaChangefee(Integer qaChangefee) {
+		this.qaChangefee = qaChangefee;
+	}
+
+}

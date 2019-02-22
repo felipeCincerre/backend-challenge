@@ -1,0 +1,36 @@
+package br.com.nextel.order.dao.mapper;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import com.nextel.xml.OcorrenciaPedidoType;
+
+public class OcorrenciaPedidoTypeRowMapper implements RowMapper<OcorrenciaPedidoType> {
+
+	
+
+	@Override
+	public OcorrenciaPedidoType mapRow(ResultSet rs, int arg1) throws SQLException {
+		
+		OcorrenciaPedidoType ocorrencia = new OcorrenciaPedidoType();
+
+		
+		ocorrencia.setStatus(rs.getString("CD_ORDER_STATUS"));
+		ocorrencia.setOcorrenciaID(rs.getString("CD_ORDER_EVENT"));
+		ocorrencia.setUsuario(rs.getString("NM_USER")); 
+		ocorrencia.setPersistido(false);
+		ocorrencia.setPermiteExclusao(false);
+		
+		SimpleDateFormat ft = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+		String data = ft.format(new Date());
+		ocorrencia.setDataHoraStatus(data);
+		ocorrencia.setDataHora(data);
+		
+
+		return ocorrencia;
+	} 
+}

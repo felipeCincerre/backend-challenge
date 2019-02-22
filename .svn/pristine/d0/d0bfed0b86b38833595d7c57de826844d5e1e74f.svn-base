@@ -1,0 +1,21 @@
+package br.com.nextel.order.dao.mapper;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import br.com.nextel.order.model.PlanService;
+
+public class PlanServiceRowMapper implements RowMapper<PlanService> {
+
+	@Override
+	public PlanService mapRow(ResultSet rs, int arg1) throws SQLException {
+		PlanService planService = new PlanService();
+		planService.setCdService(rs.getInt("cd_service"));
+		planService.setDeService(rs.getString("de_service"));
+		planService.setVaService(rs.getFloat("va_plan_service"));
+		return planService;
+	}
+
+}

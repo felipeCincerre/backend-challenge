@@ -1,0 +1,139 @@
+package br.com.nextel.order.service;
+
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.nextel.xml.GrupoItensPedidoType;
+import com.nextel.xml.PedidoType;
+import com.nextel.xml.PedidoType.ItensPedido;
+
+import br.com.nextel.order.dao.OrderDAO;
+import br.com.nextel.order.dao.PlanoDAO;
+import br.com.nextel.order.dao.ProductDAO;
+import br.com.nextel.order.dao.PromotionDAO;
+import br.com.nextel.order.exception.CreateOrderException;
+import br.com.nextel.order.model.Order;
+import br.com.nextel.order.util.OrderHelper;
+
+@Service
+public class ValidateServiceImpl implements ValidateService {
+
+	
+	@Autowired
+	OrderDAO orderDao;
+	
+	@Autowired
+	PromotionDAO promotionDao;
+	
+	@Autowired
+	PlanoDAO planoDao;
+	
+	@Autowired
+	ProductDAO productDao;
+	
+	
+	@Override
+	public void validate(PedidoType pedido, Order order) throws CreateOrderException {
+
+		validarNumeroPedido(pedido);
+		validarCanal(pedido, order);
+		validarEntregaExpressa(pedido, order);
+		validarItensPedido(pedido, order);
+		validarTransportadora(pedido, order);
+		validarCondicaoPagamento(pedido);
+		validateAttendanceRegister(order);		
+	}
+
+	private void validateAttendanceRegister(Order order) throws CreateOrderException {
+		if (order.getIdAttendance() != null || order.getSqAttendanceRegister() != null) {
+			if(!orderDao.validateAttendanceRegister(order)) {
+				throw new CreateOrderException(String.format("Nao foi possivel localizar o chamado [%d]-[%d]  no banco de dados ",  order.getIdAttendance(), order.getSqAttendanceRegister() ));
+			}
+		}
+	}
+
+	private void validarNumeroPedido(PedidoType pedido) throws CreateOrderException {
+		Map<String, Object> map = orderDao.validateOrderNumber(pedido);
+		if (map != null) {
+			throw new CreateOrderException(String.format("Ja existe um pedido de [%s] cadastrado no dia [%s].", map.get("DE_ORDER_TYPE"), map.get("DT_CREATED")));
+		}
+		
+	}
+
+	private void validarCondicaoPagamento(PedidoType pedido) throws CreateOrderException {
+		if(!orderDao.validatePaymentCondition(pedido)) {
+			throw new CreateOrderException(String.format("Condicao Pagamento [%s] nao esta associada ao tipo de pedido [%d] ", pedido.getCondicaoPagamentoID(), pedido.getTipoPedidoID()));
+		}
+	}
+
+	private void validarTransportadora(PedidoType pedido, Order order) throws CreateOrderException  {
+		if(!orderDao.validateTransportCompany(pedido)) {
+			throw new CreateOrderException(String.format("Transportadora [%s] nao esta associada ao tipo de pedido [%d] ", pedido.getTransportadoraID(), pedido.getTipoPedidoID()));
+		}
+	}
+
+	private void validarItensPedido(PedidoType pedido, Order order) throws CreateOrderException {
+		ItensPedido itensPedido = pedido.getItensPedido();
+		for(GrupoItensPedidoType item :itensPedido.getGrupoItens()) {
+			validarItemPromotion(item, pedido);
+			validarItemPlano(item, pedido);
+			validarMascaraImei(item);
+		}
+	}
+	
+	
+	private void validarMascaraImei(GrupoItensPedidoType item) throws CreateOrderException{
+		if (item.getListaProdutos() == null  || item.getListaProdutos().getProduto() == null || 
+				item.getListaProdutos().getProduto().get(0) == null  || item.getListaProdutos().getProduto().get(0).getImei() == null) {
+			return;
+		}
+		
+		if(!productDao.validateProductMask(item.getProdutoID(), item.getListaProdutos().getProduto().get(0).getImei())) {
+			throw new CreateOrderException(String.format("Validação Imei  [%s] nao eh compativel com o produto  [%s] ", item.getListaProdutos().getProduto().get(0).getImei(), item.getProdutoID() ));
+		}
+		
+	}
+
+	private void validarItemPlano(GrupoItensPedidoType item, PedidoType pedido) throws CreateOrderException {
+		if(!planoDao.validateRatePlan(pedido, item)) {
+			throw new CreateOrderException(String.format("Plano [%s] nao esta associada ao tipo de pedido [%d] ", item.getPlanoID(), pedido.getTipoPedidoID()));			
+		}
+	}
+
+	private void validarCanal(PedidoType pedido, Order order) throws CreateOrderException{
+		if(!orderDao.validateSalesChannel(pedido)) {
+			throw new CreateOrderException(String.format("Canal de Venda [%s] nao esta associada ao tipo de pedido [%d] ", pedido.getCanalVendasID(), pedido.getTipoPedidoID()));
+		}
+
+		
+		if (!orderDao.validateChannelFTE(order)) {
+			throw new CreateOrderException(String.format("Associacao FTE [%d]  X  Representative [%d] invalida ", order.getIdFTE() , order.getCdRepresentative() ) );		
+		}
+		
+	}
+
+	private void validarItemPromotion(GrupoItensPedidoType item, PedidoType pedido) throws CreateOrderException {
+		if (!promotionDao.validatePromotionTable(pedido, item)) {
+			throw new CreateOrderException(String.format("Promoção [%s] nao esta associada ao tipo de pedido [%d] ", item.getTabelaPromocionalID(), pedido.getTipoPedidoID()));
+		}
+	}
+
+	private void validarEntregaExpressa(PedidoType pedido, Order order) throws CreateOrderException {
+
+		//Validar Entrega Expressa 
+		if (OrderHelper.isFastDelivery(order)) {
+			if (!order.isDeliveryByTransportCompany()) {
+				throw new CreateOrderException("Pedido Entrega Expressa deve utilizar flag transportadora DeliveryByTransportCompany=true");
+			}
+			
+			if (pedido.getTransportadoraID() == null) {
+				throw new CreateOrderException("Pedido Entrega Expressa deve utilizar transportadora");
+			}
+		}
+	}
+	
+	
+	
+}

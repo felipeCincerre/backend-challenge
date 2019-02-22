@@ -1,0 +1,199 @@
+swagger: '2.0'
+info:
+  description: Spring Boot REST API for Maestro Create Order Entry
+  version: '1.0'
+  title: Maestro Create Order REST API
+  termsOfService: Terms of service
+  contact: {}
+  license:
+    name: Apache License Version 2.0
+    url: 'https://www.apache.org/licenses/LICENSE-2.0'
+host: 'localhost:8090'
+basePath: /
+tags:
+  - name: order-controller-v-1
+    description: Operações do Maestro
+paths:
+  /api/v1/stores:
+    post:
+      tags:
+        - order-controller-v-1
+      summary: Cria um Pedido no sistema Maestro
+      operationId: createOrderUsingPOST
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: order
+          description: order
+          required: true
+          schema:
+            $ref: '#/definitions/Order'
+      responses:
+        '200':
+          description: Criação de Pedido realizada com sucesso
+          schema:
+            type: string
+            example: 1234567890
+        '500':
+          description: Erro na criação do pedido
+definitions:
+  Order:
+    type: object
+    properties:
+      cdAttendanceGroup:
+        type: integer
+        format: int32
+        example: 1
+      cdMarket:
+        type: integer
+        format: int32
+        example: 7
+      cdRepresentative:
+        type: integer
+        format: int64
+        example: 2
+      cdRetailFederalTax:
+        type: string
+        example: '41582679436'
+      externalOrderNumer:
+        type: string
+        example: '0000000M4U0000'
+      idAttendanceLocallity:
+        type: integer
+        format: int32
+        example: 2
+      idCustomer:
+        type: integer
+        format: int64
+        example: 1111
+      cdCustomer:
+        type: string
+        example: '00.000000.00'
+      idFTE:
+        type: integer
+        format: int64
+        example: 1
+      integrationUser:
+        type: string
+        example: 'M4U'
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/OrderItem'
+      optOut:
+        type: string
+        example: 'N'
+      fgArchive:
+        type: string
+        example: 'Y'
+      orderType:
+        type: integer
+        format: int32
+        example: 102
+      idAttendance:
+        type: integer
+        format: int64
+        example: 123456789
+      sqAttendanceRegister:
+        type: integer
+        format: int64
+        example: 123456789
+      idPaymentCondition:
+        type: integer
+        format: int64
+        example: 123456789
+      deliveryByTransportCompany:
+        type: boolean
+        example: 'true'
+      idSalesChannel:
+        type: integer
+        format: int64
+        example: 123456789
+      idModalDelivery:
+        type: integer
+        format: int64
+        example: 123456789
+  OrderItem:
+    type: object
+    properties:
+      cdProduct:
+        type: string
+        example: 'SIMCARD-3G-P01'
+      ddd:
+        type: integer
+        format: int32
+        example: 11
+      idPromotionTable:
+        type: integer
+        format: int32
+      imei:
+        type: string
+        example: '222222222'
+      loyalty:
+        type: boolean
+        example: 'true'
+      phoneNumber:
+        type: string
+        example: '999991234'
+      phoneNumberPortability:
+        type: string
+        example: '999994321'
+      portability:
+        type: string
+        example: 'S'
+      portabilityExpectedDate:
+        type: string
+        format: date-time
+      simcard:
+        type: string
+        example: '111111111111'
+      tmcode:
+        type: string
+        example: '2278'
+      cdContractReplacement:
+        type: string
+        example: '123456'
+      cdSimcardReplacement:
+        type: string
+        example: '000000000000000000'
+      idReasonReplacement:
+        type: string
+        example: '123456'
+      commercialOffDetail:
+        $ref: '#/definitions/CommercialOffDetail'
+      services:
+        type: array
+        items:
+          $ref: '#/definitions/Services'
+      vaProduct:
+        type: number
+        example: '10.00'
+  CommercialOffDetail:
+    type: object
+    properties:
+      id:
+        type: string
+        example: '000000000000000000'
+      content:
+        type: string
+        example: '{id: 123, deCommercialDetail ... }'
+  Services:
+    type: object
+    properties:
+      sncode:
+        type: integer
+        format: int32
+        example: 1234
+      vaServiceChangefee:
+        type: number
+        example: '10.00'
+      qaServiceChangefeeMonth:
+        type: integer
+        format: int32
+        example: 11
+      monthlyPayment:
+        type: boolean
+        example: 'true'

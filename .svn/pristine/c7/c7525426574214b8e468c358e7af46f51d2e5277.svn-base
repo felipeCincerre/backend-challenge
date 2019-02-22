@@ -1,0 +1,15 @@
+package br.com.nextel.order.exception;
+
+public class CreateOrderException extends Exception {
+
+	public CreateOrderException(String msg, Throwable ex) {
+		super(msg, ex);
+	}
+
+	public CreateOrderException(String msg) {
+		super(msg, null);
+	}
+
+	private static final long serialVersionUID = 1L;
+
+}

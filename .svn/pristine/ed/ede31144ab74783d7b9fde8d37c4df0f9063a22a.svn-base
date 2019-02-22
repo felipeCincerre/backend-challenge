@@ -1,0 +1,64 @@
+package br.com.nextel.order.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.nextel.xml.PedidoType;
+import com.nextel.xml.ResultadoProcessamentoPedido;
+
+import br.com.nextel.order.dao.LogManagerDAO;
+import br.com.nextel.order.model.Order;
+
+@Service
+public class LogServiceImpl implements LogService {
+
+	@Value("${logManager.persit}")
+	private boolean persist;
+
+	@Autowired
+	LogManagerDAO logManagerDao;
+
+	@Override
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public Long saveLogOrderJson(Order order) {
+
+		if (persist) {
+			return logManagerDao.insertLog(order, "MAESTRO-API-CreateOrder-Json");
+		} else {
+			return null;
+		}
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void updateLogOrderJson(Long id, String output, String error) {
+		if (persist) {
+			logManagerDao.updateLog(id, output, error);
+		}
+
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void saveLogPedidoXML(Order order, PedidoType pedido, ResultadoProcessamentoPedido output) {
+
+		if (persist) {
+			XmlMapper xmlMapper = new XmlMapper();
+			try {
+				String xml = xmlMapper.writeValueAsString(pedido);
+
+				String ret = xmlMapper.writeValueAsString(output);
+
+				logManagerDao.insertLogXML(xml, order.getIdCustomer(), "MAESTRO-API-CreateOrder-XML", order.getIntegrationUser(), ret);
+			} catch (JsonProcessingException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+}

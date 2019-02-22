@@ -1,0 +1,14 @@
+package br.com.nextel.order.service;
+
+import com.nextel.xml.PedidoType;
+import com.nextel.xml.ResultadoProcessamentoPedido;
+
+import br.com.nextel.order.model.Order;
+
+public interface LogService {
+	
+	public Long saveLogOrderJson(Order order);
+	public void updateLogOrderJson(Long id, String output, String error);
+	public void saveLogPedidoXML(Order order, PedidoType pedido, ResultadoProcessamentoPedido output);
+
+}

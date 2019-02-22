@@ -1,0 +1,710 @@
+package br.com.nextel.order.service;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+import org.openuri.OrderService_Service;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.PropertyAccessorFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+
+import com.nextel.xml.ChamadoAssociadoType;
+import com.nextel.xml.ClienteType;
+import com.nextel.xml.GrupoItensPedidoType;
+import com.nextel.xml.InformacaoVarejoType;
+import com.nextel.xml.InformacoesVendaApoioType;
+import com.nextel.xml.InformacoesVendaType;
+import com.nextel.xml.ListaPacoteType;
+import com.nextel.xml.ListaProdutosPedidoType;
+import com.nextel.xml.ListaServicoPedidoType;
+import com.nextel.xml.OcorrenciaPedidoType;
+import com.nextel.xml.PacoteType;
+import com.nextel.xml.PedidoType;
+import com.nextel.xml.PedidoType.ChamadosAssociadosPedido;
+import com.nextel.xml.PedidoType.ItensPedido;
+import com.nextel.xml.PedidoType.OcorrenciasPedido;
+import com.nextel.xml.ProdutoPedidoType;
+import com.nextel.xml.ResultadoProcessamentoPedido;
+import com.nextel.xml.ServicoPedidoType;
+import com.nextel.xml.UsuarioType;
+
+import br.com.nextel.order.dao.MarketDAO;
+import br.com.nextel.order.dao.OrderDAO;
+import br.com.nextel.order.dao.OrderItemCommercialDetailDAO;
+import br.com.nextel.order.dao.PackageServiceDAO;
+import br.com.nextel.order.dao.PlanServiceDAO;
+import br.com.nextel.order.dao.PlanoDAO;
+import br.com.nextel.order.dao.ProductDAO;
+import br.com.nextel.order.dao.PromotionDAO;
+import br.com.nextel.order.exception.CreateOrderException;
+import br.com.nextel.order.model.Order;
+import br.com.nextel.order.model.OrderItem;
+import br.com.nextel.order.model.OrderItemService;
+import br.com.nextel.order.model.PackageTemplate;
+import br.com.nextel.order.model.PlanService;
+import br.com.nextel.order.model.Plano;
+import br.com.nextel.order.model.TransportCompany;
+import br.com.nextel.order.model.contract.Contract;
+import br.com.nextel.order.model.contract.ContractService;
+
+@Service
+public class OrderServiceImpl implements OrderService {
+
+	@Autowired
+	private OrderDAO dao;
+	
+	@Autowired
+	private MarketDAO marketDao;
+
+	@Autowired
+	private PromotionDAO promotionDao;
+
+	@Autowired
+	private PlanoDAO planoDao;
+	
+	@Autowired
+	private PackageServiceDAO  packageServiceDAO;
+	
+	@Autowired
+	private PlanServiceDAO planServiceDao;
+	
+	@Autowired
+	private ProductDAO productDao;
+	
+	@Autowired
+	private OrderItemCommercialDetailDAO orderItemCommercialDetailDao;
+
+	@Value("${url.endpoint.order.service}")
+	private String endpointMaestro;	
+	
+	@Value("${order.property.default.dir}")
+	private String pathPropertiesOrderDefault;	
+	
+	@Value("${url.endpoint.order.contract-detail}")
+	private String endpointContract;
+	
+	
+	@SuppressWarnings("unchecked")
+	private PedidoType loadDefaultsValues(int tipoPedido) throws CreateOrderException {
+
+		PedidoType order = new PedidoType();
+		BeanWrapper beanWrapper = PropertyAccessorFactory.forBeanPropertyAccess(order);
+		String fileName = pathPropertiesOrderDefault + File.separatorChar + "maestro-defaults-values-tipo-pedido" + tipoPedido + ".properties";
+		
+		Resource resource = new FileSystemResource(fileName);
+		Properties orderProps = new Properties();
+		try {
+			orderProps.load(resource.getInputStream());
+			
+			
+			if (orderProps != null && !orderProps.isEmpty()) {
+				
+				beanWrapper.setAutoGrowNestedPaths(true);
+
+
+				for (Iterator<?> iterator = orderProps.entrySet().iterator(); iterator.hasNext();) {
+					Map.Entry<String, ?> entry = (Map.Entry<String, ?>) iterator.next();
+					String propertyName = entry.getKey();
+					
+					// Setando numero do pedido
+					if(propertyName.contains("sufixNumeroPedido")) {
+						String sufix = entry.getValue().toString().trim();
+						order.setNumeroPedido(dao.generatorNewOrderNumber(sufix));
+						continue;
+					}
+					
+					if (beanWrapper.isWritableProperty(propertyName)) {
+						if (entry.getValue() != null) {
+							String valor = entry.getValue().toString().trim();
+							beanWrapper.setPropertyValue(propertyName, valor);
+						}
+					}
+				}
+			}			
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			throw new CreateOrderException(String.format("Arquivo não encontrado [%s] ", fileName));
+		} catch (IOException e) {
+			throw new CreateOrderException(String.format("Erro carregando propriedades: [%s] ", fileName));
+		}
+
+		return order;
+	}
+
+	public ItensPedido buildProduct(Order orderInfo, ClienteType customer) throws CreateOrderException {
+
+		ItensPedido itensPedido = new ItensPedido();
+		ListaServicoPedidoType listaServicoPedidoType;
+		
+		int cont = 1;
+
+		for (OrderItem item : orderInfo.getItems()) {
+			GrupoItensPedidoType grpItem = new GrupoItensPedidoType();
+			grpItem.setNovoRegistro(true);
+			
+			if (item.getDdd() == 0 ) {
+				grpItem.setCodigoArea(marketDao.getDDDMarket(orderInfo.getCdMarket()));
+			}else {
+				grpItem.setCodigoArea(item.getDdd());
+			}
+			grpItem.setQuantidade(1);
+
+			grpItem.setValorUnitProduto(productDao.getCostProduct(item.getCdProduct()) );
+			if (item.getVaProduct() != null &&   item.getVaProduct() >= 0) {
+				grpItem.setValorUnitProdutoDesconto(item.getVaProduct());
+			}else {
+				grpItem.setValorUnitProdutoDesconto(productDao.getPromotionProduct(item.getCdProduct(), item.getIdPromotionTable()) );
+			}
+			grpItem.setValorTotalComDesconto(grpItem.getValorUnitProdutoDesconto());
+
+			// FIXME Ajustar Valores Serviços
+			grpItem.setValorTotalPlanoServicos(0);
+			grpItem.setValorTotalProduto(grpItem.getValorUnitProduto());
+			grpItem.setValorTotalProdutoComDesconto(grpItem.getValorUnitProdutoDesconto());
+			
+			grpItem.setProdutoID(item.getCdProduct());
+
+			ListaProdutosPedidoType listaProd = new ListaProdutosPedidoType();
+			ProdutoPedidoType produto = new ProdutoPedidoType();
+			Plano plano = null;
+			
+			//Carrega dados do Contrato
+			if (item.getCdContractReplacement() != null ) {
+				Contract contrato = getContractDetail(customer.getDocumentoFiscal(), item.getCdContractReplacement(), orderInfo.getOrderType());
+				
+				item.setListaServico(contrato.getListaServico());
+				
+				if (item.getCdSimcardReplacement() != null) {
+					produto.setSimCardAntigo(item.getCdSimcardReplacement());
+				}else {
+					produto.setSimCardAntigo(contrato.getSimacard());
+				}
+				
+				produto.setMotivoID(item.getIdReasonReplacement());
+				produto.setPlanoIDAntigo(contrato.getPlan().getId());
+				produto.setContrato(item.getCdContractReplacement() );
+				produto.setNumeroTelefone(contrato.getTelefone());
+				
+				plano = new Plano();
+				plano.setFgEffectivePlan(contrato.getPlan().isVigente());
+				plano.setIdRatePlan(Long.parseLong(contrato.getPlan().getId()));
+			}			
+			
+
+			if (item.getTmcode() != null) {
+					plano = planoDao.getPlano(item.getTmcode());
+			}
+
+			if (plano == null)
+				throw new CreateOrderException(
+						String.format("O código do plano [%s] informado nao foi localizado na tsng_rate_plan", item.getTmcode()));
+
+			grpItem.setPlanoID(String.valueOf(plano.getIdRatePlan()));
+			grpItem.setPlanoVigente(plano.getFgEffectivePlan());
+
+			grpItem.setMostraItens(true);
+
+			if (item.getIdPromotionTable() != 0) {
+				Integer idPromotion =item.getIdPromotionTable();
+				Boolean orderHasPromotion = promotionDao.orderHasPromotion(orderInfo.getOrderType(), idPromotion);
+				if (!orderHasPromotion)
+					throw new CreateOrderException(String.format(
+							"O id da promocao [%d] informada não está associada ao tipo de pedido [%d]", idPromotion, orderInfo.getOrderType()));
+
+				grpItem.setTabelaPromocionalID(String.valueOf(item.getIdPromotionTable())); 
+			}
+
+			produto.setSimCard(item.getSimcard());
+			produto.setImei(item.getImei());
+
+			if (grpItem.getCodigoArea() != null) {
+				produto.setPrefixoTelefone(grpItem.getCodigoArea().toString());
+			}
+
+			if (item.getPhoneNumber() != null) {
+				String telefone = item.getPhoneNumber().replaceAll("[^0-9]+", "");
+				if (!telefone.isEmpty())
+					produto.setNumeroTelefone(
+							String.format("%d%d%d", 55, grpItem.getCodigoArea(), Integer.valueOf(telefone)));
+			}
+
+			produto.setUnitName("RADIO-" + cont++ );
+			produto.setProdutoID(String.valueOf(item.getCdProduct()));
+			produto.setPlanoID(String.valueOf(plano.getIdRatePlan()));
+			produto.setHabilitaVAS(true);
+			produto.setTabelaPromocionalID(String.valueOf(item.getIdPromotionTable()));
+			//produto.setRadioID(orderInfo.getFleetNumber());
+			produto.setPlanoVigente(plano.getFgEffectivePlan());
+			
+			// constroi serviços baseado no dados do request body
+			buildRestService(item, produto);
+			
+			if(item.getListaServico() != null && item.getListaServico().size() > 0)
+				listaServicoPedidoType = loadContractService(item.getListaServico());
+			else
+				listaServicoPedidoType = loadCoreServices(orderInfo, produto, plano);
+
+			produto.setListaServicosBasico(listaServicoPedidoType);
+
+			listaProd.getProduto().add(produto);
+			grpItem.setListaProdutos(listaProd);
+			itensPedido.getGrupoItens().add(grpItem);
+		}
+
+		return itensPedido;
+	}
+	
+	private void buildRestService(OrderItem item, ProdutoPedidoType produto) throws CreateOrderException{
+		if(item.getServices() == null || item.getServices().isEmpty() || produto.getPlanoID() == null || produto.getPlanoID().isEmpty())
+			return;
+		
+		// zerá os valores do serviço
+		item.setListaServico(new ArrayList<ContractService>());
+		
+		for(OrderItemService service : item.getServices()) {
+			ContractService contractService = new ContractService();
+			
+			PlanService planService = planServiceDao.findService(Long.parseLong(produto.getPlanoID()), service.getSncode());
+			
+			if(planService == null)
+				throw new CreateOrderException(
+					String.format("O serviço [%d] infomado não pode ser utilizado para o plano [%s]", 
+						service.getSncode(),
+						produto.getPlanoID()
+				));				
+			
+			contractService.setServicoID(Long.valueOf(service.getSncode()));
+			contractService.setServicoValorOriginal(planService.getVaService());
+			contractService.setServicoTipoSigla(planService.getDeService());
+			
+			if(service.getVaServiceChangefee() != null  && planService.getVaService() != service.getVaServiceChangefee().floatValue()) {
+				
+				if(service.getQaServiceChangefeeMonth() == null || service.getQaServiceChangefeeMonth() == 0)
+					throw new CreateOrderException(
+						String.format("O serviço [%d] possui changefee com o valor [%.2f] diferente do valor de face [%.2f], a quantidade de meses da changefee deve ser informado.", 
+							service.getSncode(),
+							service.getVaServiceChangefee(),
+							planService.getVaService()
+					));
+				
+				contractService.setServicoValorNovo(service.getVaServiceChangefee());
+				if (service.getQaServiceChangefeeMonth() == -1  ) {
+					contractService.setDuracaoDescontoID(service.getQaServiceChangefeeMonth());
+					contractService.setDuracaoDescontoMeses(service.getQaServiceChangefeeMonth());
+					
+					if (item.isLoyalty()  && service.isMonthlyPayment()) {
+						throw new CreateOrderException(
+								String.format("O servico [%d] de mensalidade nao pode ter desconto 'PARA SEMPRE' quando fidelizado. A quantidade de meses da fidelizacao deve ser maior que zero", 
+									service.getSncode()	));	
+					}
+					
+				}else {
+					contractService.setDuracaoDescontoID(service.getQaServiceChangefeeMonth() + 1);
+					contractService.setDuracaoDescontoMeses(service.getQaServiceChangefeeMonth());
+				}
+				
+			}
+			
+			item.getListaServico().add(contractService);
+		}
+	}
+
+	private ListaServicoPedidoType loadContractService(List<ContractService> listContractService) {
+		
+		ListaServicoPedidoType listaServicoBasico = new ListaServicoPedidoType();
+		
+		listContractService.stream().forEach(p -> {
+			
+			ServicoPedidoType servicoPedidoType = new ServicoPedidoType();
+
+			servicoPedidoType.setCdTecnologia(3); // 3G
+			servicoPedidoType.setServicoID(p.getServicoID());
+			servicoPedidoType.setServicoValorOriginal(p.getServicoValorOriginal());
+			servicoPedidoType.setServicoName(p.getServicoTipoSigla());
+			
+			servicoPedidoType.setServicoValorNovo(p.getServicoValorNovo()); 
+			servicoPedidoType.setDuracaoDescontoID(p.getDuracaoDescontoID()); 
+			servicoPedidoType.setDuracaoDescontoMeses(p.getDuracaoDescontoMeses());
+			servicoPedidoType.setParaSempre((servicoPedidoType.getDuracaoDescontoID() == -1));
+
+			servicoPedidoType.setTipoAcao("I");
+
+			listaServicoBasico.getServico().add(servicoPedidoType);
+		});
+		
+		return listaServicoBasico;
+	}
+
+	private ListaServicoPedidoType  loadCoreServices(Order orderInfo, 
+			ProdutoPedidoType produto, Plano plano) throws CreateOrderException {
+		List<PlanService> planservice = planServiceDao.getAllBaseServiceOfPlan(plano.getIdRatePlan());
+
+		 ListaServicoPedidoType listaServicoBasico = new ListaServicoPedidoType();
+		
+		planservice.stream().forEach(p -> {
+			ServicoPedidoType servicoPedidoType = new ServicoPedidoType();
+
+			servicoPedidoType.setCdTecnologia(3); // 3G
+			servicoPedidoType.setServicoID(p.getCdService());
+			servicoPedidoType.setServicoValorOriginal(p.getVaService());
+			servicoPedidoType.setServicoName(p.getDeService());
+
+			// Conceder desconto 100%
+			if (p.getVaService() > 0) {
+				servicoPedidoType.setServicoValorNovo(0); // Novo valor zerado
+				servicoPedidoType.setDuracaoDescontoID(13); // 12 meses ciclo 13
+				servicoPedidoType.setDuracaoDescontoMeses(12);
+			}
+
+			servicoPedidoType.setTipoAcao("I");
+			servicoPedidoType.setServicoBasico(true);
+
+			listaServicoBasico.getServico().add(servicoPedidoType);
+		});
+
+		// Adicionando Serviços PRIP
+		ServicoPedidoType prip1 = new ServicoPedidoType();
+		prip1.setCdTecnologia(3); // 3G
+		prip1.setServicoID(3000);
+		prip1.setTipoAcao("I");
+		listaServicoBasico.getServico().add(prip1);
+
+		ServicoPedidoType pripd = new ServicoPedidoType();
+		pripd.setCdTecnologia(3); // 3G
+		pripd.setServicoID(3001);
+		pripd.setTipoAcao("I");
+		listaServicoBasico.getServico().add(pripd);
+
+		ServicoPedidoType pripi = new ServicoPedidoType();
+		pripi.setCdTecnologia(3); // 3G
+		pripi.setServicoID(3004);
+		pripi.setTipoAcao("I");
+		listaServicoBasico.getServico().add(pripi);
+
+		ServicoPedidoType pripw = new ServicoPedidoType();
+		pripw.setCdTecnologia(3); // 3G
+		pripw.setServicoID(3003);
+		pripw.setTipoAcao("I");
+		listaServicoBasico.getServico().add(pripw);
+
+		if (orderInfo.getOptOut() != null && orderInfo.getOptOut().equals("N")) {
+			ServicoPedidoType optOut = new ServicoPedidoType();
+			optOut.setCdTecnologia(3); // 3G
+			optOut.setServicoID(2152);
+			optOut.setTipoAcao("I");
+			listaServicoBasico.getServico().add(optOut);
+		}
+		
+		
+		// Verificando serviços pacote e gerando a lista de Pacotes no produto
+		buildPackage(listaServicoBasico.getServico(), orderInfo.getOrderType(), produto);
+		
+		
+		return listaServicoBasico;
+	}
+	
+	private void buildPackage(List<ServicoPedidoType> listaServico, Integer idOrdertype,  ProdutoPedidoType produto) throws CreateOrderException {  
+		
+		String cdProduct = produto.getProdutoID();
+		Integer idPromotionTable = Integer.valueOf(produto.getTabelaPromocionalID().replaceAll("[^0-9]+", "")); 
+		Integer idPlan = Integer.valueOf(produto.getPlanoID().replaceAll("[^0-9]+", ""));
+					
+		PackageTemplate packageTemplate = packageServiceDAO.getPackage(idOrdertype, idPromotionTable, cdProduct);
+		List<ServicoPedidoType> servicePackage = new ArrayList<ServicoPedidoType>();
+		
+		if(packageTemplate != null) {
+			servicePackage = packageServiceDAO.getServicesPackage(packageTemplate.getIdPackageTemplate()); 
+			
+			// Verifica se o serviço selecionado no pacote é valido para o plano
+			checkServicesPlan(servicePackage, idPlan);
+			
+			Double  totalServicos = 0D;
+			for (ServicoPedidoType sp : servicePackage ) {
+				
+				if(sp.isExcluir()) {
+					// removendo o serviço base do plano
+					listaServico.removeIf(serviceBase -> serviceBase.getServicoID() == sp.getServicoID() );
+				}else {
+					
+					ServicoPedidoType servicoPedidoType = new ServicoPedidoType();
+					
+					// Recupera o serviço se já foi adicionado através do serviço base
+					ServicoPedidoType servicoBase = listaServico.stream()
+							.filter(serviceBase -> serviceBase.getServicoID() == sp.getServicoID() )
+							.findFirst().orElse(null);
+					
+					if(servicoBase != null)
+						servicoPedidoType = servicoBase;
+					
+					servicoPedidoType.setCdTecnologia(3); // 3G
+					servicoPedidoType.setServicoID(sp.getServicoID());
+					servicoPedidoType.setServicoValorOriginal(sp.getServicoValorOriginal());
+					servicoPedidoType.setServicoName(sp.getServicoName());
+					
+					// Conceder desconto 100%
+					if(sp.getServicoValorNovo() > 0) {
+						servicoPedidoType.setServicoValorNovo(sp.getServicoValorNovo()); // Novo valor zerado
+						servicoPedidoType.setDuracaoDescontoID(sp.getDuracaoDescontoID()); // 12 meses ciclo 13
+						servicoPedidoType.setDuracaoDescontoMeses(
+							(sp.getDuracaoDescontoMeses() > 1? sp.getDuracaoDescontoMeses() - 1 : 1)
+						);
+						totalServicos +=sp.getServicoValorNovo();
+					}else {
+						totalServicos +=sp.getServicoValorOriginal();
+					}
+					
+					if(servicoBase == null) {
+						servicoPedidoType.setTipoAcao("I");
+						servicoPedidoType.setServicoBasico(true);
+						
+						listaServico.add(servicoPedidoType);
+					}
+				}
+			}
+			
+			ListaPacoteType listaPacote = new ListaPacoteType();
+			PacoteType pacote = new PacoteType();
+			pacote.setNomePacote(packageTemplate.getNomePacote());
+			pacote.setTemplateID(packageTemplate.getIdPackageTemplate());
+			pacote.setSelecionado(true);
+			pacote.setAlternarPara(false);
+			pacote.setValorTotal(totalServicos);
+			ListaServicoPedidoType listaServicoPacote = new ListaServicoPedidoType() ;
+			listaServicoPacote.getServico().addAll(listaServico);
+			pacote.setListaServicosPacote(listaServicoPacote );;
+			listaPacote.getPacote().add(pacote);
+			produto.setListaPacote(listaPacote );
+		}		
+	}
+	
+	private void checkServicesPlan(List<ServicoPedidoType> services, Integer idPlan) throws CreateOrderException{
+		
+		for(ServicoPedidoType service : services) {
+			PlanService planService = planServiceDao.findService(Long.valueOf(idPlan), Long.valueOf(service.getServicoID()).intValue());
+			
+			if(planService == null  ||  planService.getVaService() == null) {
+				throw new CreateOrderException(String.format("O servico id [%d][%s] nao está disponível para o plano id [%d]", service.getServicoID(), service.getServicoName(), idPlan));
+			}
+			
+			service.setServicoValorOriginal(planService.getVaService());
+		}
+		
+	}
+
+	@Override
+	public OcorrenciasPedido buildOcorrence(Order orderInfo) throws CreateOrderException {
+		List<OcorrenciaPedidoType> listOcorrence = dao.getOcorrencias(orderInfo);
+		
+		if(listOcorrence == null)
+			throw new CreateOrderException(String.format("Não foi encontrado ocorrencia/status 'DEFAULT' para o tipo de pedido [%d]", orderInfo.getOrderType()));
+		
+		OcorrenciasPedido ocorrencias = new OcorrenciasPedido();
+		ocorrencias.getOcorrencia().addAll(listOcorrence);
+		
+		return ocorrencias;
+	}
+
+	@Override
+	public PedidoType buildCapaOrder(Order orderInfo) throws CreateOrderException{
+		
+		PedidoType pedido = loadDefaultsValues(orderInfo.getOrderType());
+		pedido.setProcessoNegocioID(dao.getProcessoNegocio(orderInfo));
+		
+		if(orderInfo.getCdMarket() == null)
+			throw new CreateOrderException(String.format("O codigo do mercado deve ser informado"));
+		else {
+			pedido.setRedeNextelID(Long.valueOf(orderInfo.getCdMarket())); 
+		}
+		
+		
+		if(orderInfo.getIdPaymentCondition() != null && orderInfo.getIdPaymentCondition() != 0) {
+			pedido.setCondicaoPagamentoID(String.valueOf(orderInfo.getIdPaymentCondition()));
+		}
+
+		if (orderInfo.getIdSalesChannel() != null && orderInfo.getIdSalesChannel() >0) {
+			pedido.setCanalVendasID(String.valueOf(orderInfo.getIdSalesChannel()));
+		}
+		
+		pedido.setCanalEntradaID(orderInfo.getCdAttendanceGroup());
+		pedido.setDetalheCanalEntradaID(orderInfo.getIdAttendanceLocallity());
+		
+		InformacoesVendaType infoVenda = new InformacoesVendaType();
+		
+		if (orderInfo.getCdRepresentative() !=null) {
+			infoVenda.setVendedorID(  String.valueOf(orderInfo.getCdRepresentative()));
+		}
+		if (orderInfo.getIdFTE() != null) {
+			infoVenda.setFteID(String.valueOf(orderInfo.getIdFTE()));
+		}
+		pedido.setInformacoesVenda(infoVenda);
+		
+		InformacoesVendaApoioType vendaApoio = new InformacoesVendaApoioType();
+		pedido.setInformacoesVendaApoio(vendaApoio);
+		
+		pedido.setCriador(orderInfo.getIntegrationUser()); 
+
+		// Pedido Varejo
+		if (orderInfo.getCdRetailFederalTax() != null && orderInfo.getExternalOrderNumer() != null ) {
+			InformacaoVarejoType informVarejo = new InformacaoVarejoType();
+			informVarejo.setCdVendedorFederalTax(orderInfo.getCdRetailFederalTax());
+			informVarejo.setCdPedido(orderInfo.getExternalOrderNumer());
+			pedido.setInformacaoVarejo(informVarejo);
+		}
+		
+		//Caso o External Order Number for preenchido usar ele como numero do pedido
+		//é necessário que o parametro gerarNumeroAutomaticamente esteja =  false. 
+		//A origem é responsável pela geração do numero do pedido respeitando as regras de numeração
+		if (orderInfo.getExternalOrderNumer() != null && !pedido.isGerarNumeroAutomaticamente()) {
+			pedido.setNumeroPedido(orderInfo.getExternalOrderNumer());
+		}
+		
+		SimpleDateFormat fdata = new SimpleDateFormat("dd/MM/yyyy");
+		String dataPedido = fdata.format(new Date());
+		pedido.setDataCriacaoPedido(dataPedido);
+		pedido.setDataPedido(dataPedido);
+		pedido.setDataCriacaoPedidoValor(new Date().getTime());
+		pedido.setDataEntregaPedido(dataPedido);
+		pedido.setFleetID(Integer.valueOf(marketDao.getFleetMarket(orderInfo.getCdMarket())));
+		
+		for (OrderItem oi : orderInfo.getItems()) {
+			if ("S".equals( oi.getPortability() ) ) {
+				pedido.setFgPortabilidade("Y");
+			}
+		}
+		
+		return pedido;
+		
+	}
+
+	@Override
+	public ResultadoProcessamentoPedido insertOrder(UsuarioType user, PedidoType pedido) throws CreateOrderException {
+
+		ResultadoProcessamentoPedido resultadoPedido = null;
+		try {
+			OrderService_Service orderSOAP = new OrderService_Service(new URL(endpointMaestro));
+			org.openuri.OrderService orderServiceSoapPort = orderSOAP.getOrderServiceSoapPort();
+			resultadoPedido = orderServiceSoapPort.insertOrder(user, pedido);
+
+		} catch (MalformedURLException e) {
+			throw new CreateOrderException(
+					String.format("Erro ao acessar a URL do Maestro OrderService [%s]", endpointMaestro));
+		}
+		
+		return resultadoPedido;
+	}
+
+	@Override
+	public void updateItems(Order order, ResultadoProcessamentoPedido response) {
+		
+		List<GrupoItensPedidoType> grupoItens = response.getPedido().getItensPedido().getGrupoItens();
+		for (GrupoItensPedidoType item  : grupoItens ) {
+			
+			//pesquisa item no pedido M4U
+			OrderItem m4uItem = null;
+			for (int i = 0; i < order.getItems().size(); i++) {
+				m4uItem = order.getItems().get(i);
+				
+				if (m4uItem.getPhoneNumberPortability() != null) {
+					if (item.getListaProdutos().getProduto().get(0).getNumeroTelefone().indexOf(m4uItem.getPhoneNumber()) >=0 ) {
+						break;
+					}
+				}
+				m4uItem = null;
+			}
+			
+			if (m4uItem != null) {
+				dao.updateOrderItem(item.getID(), response.getPedido().getNumeroPedido(), m4uItem.getPhoneNumberPortability(), m4uItem.getPortabilityExpectedDate());
+			}
+			
+		}
+	}	
+
+	private Contract getContractDetail(String cdFederalTax, String contract, Integer idOrderType) throws CreateOrderException {
+		String params = endpointContract.replace("{idOrderType}", idOrderType.toString())
+				.replace("{cpf}", cdFederalTax)
+				.replace("{contract}", contract);				
+		try {
+			Contract response = new RestTemplate().getForObject(params, Contract.class);
+			
+			if(response == null)
+				throw new CreateOrderException(String.format("Não foi possível recuperar informações do contrato [%s] o serviço retornou vazio", contract));
+			
+			return response;
+			
+		}catch(HttpStatusCodeException e) {			
+			throw new CreateOrderException(String.format("Não foi possível recuperar o contrato [%s]: %s", contract, e.getResponseBodyAsString()), e);
+		}catch (RestClientException e) {
+			throw new CreateOrderException(String.format("Não foi possível recuperar o contrato [%s]: %s", contract, e.getMessage()), e);
+		}
+		
+		
+	}
+
+	@Override
+	public PedidoType orderAttendanceAssoc(Order order, PedidoType pedido) throws CreateOrderException{
+		ChamadoAssociadoType chamado = new ChamadoAssociadoType();
+		
+		// Cria variavel para Chamados Associados Pedido
+		if(pedido.getChamadosAssociadosPedido() == null)
+			pedido.setChamadosAssociadosPedido(new ChamadosAssociadosPedido());
+		
+		chamado.setIdAttendance(String.valueOf(order.getIdAttendance()));
+		chamado.setNumero(String.valueOf(order.getIdAttendance())); // Maestro está olhando para esse campo como IdAttendance
+		chamado.setSqAttendanceRegister(String.valueOf(order.getSqAttendanceRegister()));
+		
+		pedido.getChamadosAssociadosPedido().getChamadoAssociado().add(chamado);
+		return pedido;
+	}
+	
+	@Override
+	public TransportCompany getTransportCompanyDefaultForMarket(PedidoType pedido) {
+		return marketDao.findTransportCompanyMain(pedido.getTipoPedidoID(), Long.valueOf(pedido.getCliente().getMercado()));
+	}
+
+	@Override
+	public void createRegisterCommercialDetail(Order order, PedidoType pedidoType) {
+		
+		List<GrupoItensPedidoType> itens = pedidoType.getItensPedido().getGrupoItens();
+		int i = 0;
+		
+		for(GrupoItensPedidoType item : itens) {
+			
+			OrderItem itemRest = order.getItems().get(i++);
+			
+			if(itemRest.getCommercialOffDetail() != null) {
+				orderItemCommercialDetailDao.registerCommercialDetail(
+					itemRest.getCommercialOffDetail(), 
+					pedidoType.getNumeroPedido().trim(), 
+					Long.valueOf(item.getID().trim()), 
+					pedidoType.getCriador()
+				);
+			}
+		}
+		
+	}
+
+	@Override
+	public void createRegisterAcceptControl(String numeroPedido) throws CreateOrderException{
+		dao.registerAcceptControl(numeroPedido);
+	}
+}
+
+	

@@ -1,0 +1,47 @@
+package br.com.nextel.order.dao;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import com.nextel.xml.GrupoItensPedidoType;
+import com.nextel.xml.PedidoType;
+
+@Repository
+public class PromotionDAO  {
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+	
+	private final String QRY_ORDER_HAS_PROMOTION = "SELECT " + 
+			"  count(*) " + 
+			"FROM " + 
+			"  TSNG_ORDER_TYPE_PROMOTION " + 
+			"WHERE" + 
+			"  fg_excluded_register = 'N' " + 
+			"  AND id_order_type = ? " + 
+			"  AND cd_promotion_table = ? ";
+	
+	public Boolean orderHasPromotion(Integer idOrderType, Integer cdPromotion) {
+		
+		  Integer count = jdbcTemplate.queryForObject(QRY_ORDER_HAS_PROMOTION, 
+				 Integer.class, idOrderType, cdPromotion );
+		
+		  return count>0;
+	
+	}
+	
+	
+	private String SQL_PROMOT = "select count(*) from tsng_order_type_promotion where id_order_type = ? and trim(cd_promotion_table) = ?";
+	public boolean validatePromotionTable(PedidoType pedido, GrupoItensPedidoType item ) {
+		try {
+			long result = jdbcTemplate.queryForObject(SQL_PROMOT, Long.class , pedido.getTipoPedidoID()  , item.getTabelaPromocionalID());
+			return result>0;
+		}catch(EmptyResultDataAccessException e) {
+			return false;
+		}
+	}		
+	
+	
+}

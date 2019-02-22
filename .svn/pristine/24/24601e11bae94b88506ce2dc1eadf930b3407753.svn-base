@@ -1,0 +1,47 @@
+package br.com.nextel.order.model;
+
+import java.io.Serializable;
+
+public class OrderItemService implements Serializable{
+
+
+	private static final long serialVersionUID = 112341341234123434L;
+	private Integer sncode;
+	private Double vaServiceChangefee;
+	private Integer qaServiceChangefeeMonth;
+	private boolean monthlyPayment = false;
+
+	public Integer getSncode() {
+		return sncode;
+	}
+
+	public void setSncode(Integer sncode) {
+		this.sncode = sncode;
+	}
+
+	public Double getVaServiceChangefee() {
+		return vaServiceChangefee;
+	}
+
+	public void setVaServiceChangeFee(Double vaServiceChangefee) {
+		this.vaServiceChangefee = vaServiceChangefee;
+	}
+
+	public Integer getQaServiceChangefeeMonth() {
+		return qaServiceChangefeeMonth;
+	}
+
+	public void setQaServiceChangeFeeMonth(Integer qaServiceChangefeeMonth) {
+		this.qaServiceChangefeeMonth = qaServiceChangefeeMonth;
+	}
+
+	public boolean isMonthlyPayment() {
+		return monthlyPayment;
+	}
+
+	public void setMonthlyPayment(boolean monthlyPayment) {
+		this.monthlyPayment = monthlyPayment;
+	}
+	
+
+}

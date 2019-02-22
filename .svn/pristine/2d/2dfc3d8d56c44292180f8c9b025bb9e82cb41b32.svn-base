@@ -1,0 +1,61 @@
+package br.com.nextel.order.dao;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import br.com.nextel.order.exception.CreateOrderException;
+
+@Repository
+public class ProductDAO {
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+	
+	private String QRY_COST_PRODUCT = "SELECT VA_COST_PRODUCT " +
+			 " FROM tsng_cost_product "+
+			 " WHERE dt_start_cost_product < trunc(SYSDATE) "+
+			 "   AND dt_end_cost_product > trunc(SYSDATE) "+
+			 "   AND trim(cd_product) = ? "
+			 + " AND rownum=1";
+	
+	private String QRY_COST_PROMOTION_PRODUCT = 
+			"select va_promotion_product "
+			+ "from sng.TSNG_PROMOTION_PRODUCT pp\r\n" + 
+			"			 WHERE dt_start_PROMOTION_product < trunc(SYSDATE)\r\n" + 
+			"			   AND dt_end_PROMOTION_product > trunc(SYSDATE)" +
+			 "   AND trim(cd_product) = ? " + 
+			"   AND trim(pp.cd_promotion_table) = ?";
+	
+	private String QRY_VALIDATE_PRODUCT_MASK = 
+			"select count(*) \r\n" + 
+			"from tsng_product_imei_code_mask\r\n" + 
+			"where trim(cd_product) = ? \r\n" + 
+			"and fg_excluded_register = 'N'\r\n" + 
+			"and ? like cd_imei_code_mask";	
+	
+	public Float getCostProduct (String cdProduct) {
+		Float valor = jdbcTemplate.queryForObject(QRY_COST_PRODUCT, Float.class, cdProduct);
+		return valor;
+	}
+	
+	public Float getPromotionProduct(String cdProduct, Integer cdPromotion) throws CreateOrderException {
+		try {
+			Float valor = jdbcTemplate.queryForObject(QRY_COST_PROMOTION_PRODUCT, Float.class, cdProduct, cdPromotion);
+			return valor;		
+		}catch(EmptyResultDataAccessException e) {
+			throw new CreateOrderException(String.format("Nao foi possivel encontrar o valor do Produto [%s] para a promocao [%d] ",cdProduct, cdPromotion ));
+		}
+	}
+	
+	public boolean validateProductMask(String cdProduct, String imei) {
+		try {
+			Long ret = jdbcTemplate.queryForObject(QRY_VALIDATE_PRODUCT_MASK, Long.class , cdProduct, imei); 
+			return ret.longValue() > 0;
+		}catch(EmptyResultDataAccessException e) {
+			return false;
+		}
+	}	
+	
+}

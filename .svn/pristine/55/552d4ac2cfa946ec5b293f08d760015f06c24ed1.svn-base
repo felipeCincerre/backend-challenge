@@ -1,0 +1,77 @@
+package br.com.nextel.order.dao;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import com.nextel.xml.ServicoPedidoType;
+
+import br.com.nextel.order.dao.mapper.PackageTemplateRowMapper;
+import br.com.nextel.order.dao.mapper.ServicePackageRowMapper;
+import br.com.nextel.order.model.PackageTemplate;
+
+@Repository
+public class PackageServiceDAO {
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+	
+	private final String QRY_FIND_PACKAGE_ID = "SELECT " + 
+			"  o.id_package_template, pt.nm_package_template " + 
+			"FROM " + 
+			"  sng.tsng_pack_template_config o , sng.tsng_package_template pt " + 
+			"WHERE pt.id_package_template = o.id_package_template " + 
+			"  AND o.id_order_type = ? " + 
+			"  AND o.cd_promotion_table = ? " + 
+			"  AND trim(o.cd_product) = ? " + 
+			"  AND o.fg_main_pack_template_config = 'Y'";
+	
+	public PackageTemplate getPackage(Integer idOrderType, Integer idPromotionPackage, String cdProduct) {
+		
+		try {
+			return jdbcTemplate.queryForObject(QRY_FIND_PACKAGE_ID, new PackageTemplateRowMapper(), idOrderType,
+					idPromotionPackage, cdProduct);
+		} catch (EmptyResultDataAccessException e) {
+			return null;
+		}
+	}
+	
+	private final String QRY_LIST_SERVICE_PACKAGE = "SELECT " + 
+			"pts.cd_service, " + 
+			"pts.qa_change_access_fee_billcycle, " + 
+			"pts.va_change_access_fee, " + 
+			"pts.tp_pack_template_serv_action, " + 
+			"s.de_service,  pts.qa_change_access_fee_month " + 
+			"FROM " + 
+			"  SNG.TSNG_PACKAGE_TEMPLATE_SERVICE  pts " + 
+			"  JOIN SNG.TSNG_SERVICE s " + 
+			"    ON (pts.CD_SERVICE = s.CD_SERVICE) " + 
+			"WHERE " + 
+			"  pts.ID_PACKAGE_TEMPLATE = ? ";
+
+	public List<ServicoPedidoType> getServicesPackage(Integer idPackage){
+		return jdbcTemplate.query(QRY_LIST_SERVICE_PACKAGE,  new ServicePackageRowMapper() , idPackage);
+	}
+
+	private final String QRY_FIND_VALOR_ORIGINAL = "SELECT "
+			+ "va_plan_service "
+			+ "FROM "
+			+ "	tsng_plan_service "
+			+ "WHERE "
+			+ "	cd_service = ? "
+			+ "	AND id_rate_plan = ? ";
+
+	public Float getValorOriginalPlan(Integer cdService, Integer idPlan) {
+		Float valor = null;
+		try {
+			valor = jdbcTemplate.queryForObject(QRY_FIND_VALOR_ORIGINAL, Float.class, cdService, idPlan);
+		} catch (Exception e) {
+
+		}
+		return valor;
+	}
+	
+}
