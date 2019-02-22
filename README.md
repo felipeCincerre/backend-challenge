@@ -19,3 +19,5 @@ por lá.
 
 O que pode ser modificado:
 Implementação dos outros serviços e consertar as chamadas via SoapUi.
+
+O arquivo do swagger pode ser encontrado na pasta docs
